@@ -135,7 +135,7 @@ internal fun BookReader(container: AppContainer, book: LibraryBook, onBack: () -
     val background = when (tone) { "night" -> Color(0xFF1C1D21); "day" -> Color.White; else -> Color(0xFFF8F2E6) }
     val ink = if (tone == "night") Color(0xFFE2DED5) else Color(0xFF32312D)
     val muted = if (tone == "night") Color(0xFFA9A59C) else Color(0xFF77736B)
-    val scrollingDocument = document?.let { mode != "paged" || it.fixed } == true
+    val scrollingDocument = document != null && mode != "paged"
     val readerButtons = ButtonDefaults.textButtonColors(color = Color.Transparent, textColor = ink)
     val activeTocIndex = document?.toc?.let { entries ->
         entries.indexOfFirst { it.chapter == chapter && it.fragment == fragment }
@@ -259,7 +259,7 @@ internal fun BookReader(container: AppContainer, book: LibraryBook, onBack: () -
     LaunchedEffect(tone, font, lineHeight, family, mode) {
         preferences.edit { putString("tone", tone); putInt("font", font); putFloat("lineHeight", lineHeight); putString("family", family); putString("mode", mode) }
     }
-    // The native settings preview follows the thumb immediately. Delay the heavier WebView
+    // The native settings preview follows the thumb immediately. Delay native repagination
     // re-layout until a font adjustment settles, instead of rebuilding it for every slider step.
     LaunchedEffect(font, settings) {
         if (settings) delay(120.milliseconds)
@@ -432,7 +432,7 @@ internal fun BookReader(container: AppContainer, book: LibraryBook, onBack: () -
     }
     val progress = if (book.format == "PDF") "$page / $count" else
         "${(((page - 1).toFloat() / count) * 100).roundToInt()}%" +
-            if (mode == "paged" && document?.fixed != true) " · ${controller.screenPage}/${controller.screenPages}" else ""
+            if (mode == "paged") " · ${controller.screenPage}/${controller.screenPages}" else ""
     fun seekTo(target: Int) {
         if (closing) return
         if (book.format == "PDF") { controller.goToChapter(target - 1, 0); controls = false }
@@ -449,8 +449,6 @@ internal fun BookReader(container: AppContainer, book: LibraryBook, onBack: () -
     MiuixTheme(colors = colors) {
     Scaffold(containerColor = background, contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbar, Modifier.imePadding().navigationBarsPadding()) }) { padding ->
-        // This subtree must never sit inside a graphicsLayer: the EPUB reader hosts a real WebView,
-        // and any ancestor alpha/scale makes Compose composite that view off-screen, which blanks it.
         Box(Modifier.fillMaxSize().background(background).padding(padding).consumeWindowInsets(padding)) {
             Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.displayCutout).navigationBarsPadding()) {
                 // The header and the progress line reserve the same 20.dp / 28.dp strips the reading
@@ -469,17 +467,14 @@ internal fun BookReader(container: AppContainer, book: LibraryBook, onBack: () -
                             { controls = !controls }, { if (!controller.loaded) error = it else notify(it) }, Modifier.fillMaxSize()) }
                         if (!controller.loaded) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     } else document?.let { doc ->
-                        // Deliberately not wrapped in key(chapter): the reader's own AndroidView update
-                        // block reloads the document whenever the chapter's html changes, and tearing
-                        // the WebView subtree down and rebuilding it on every jump is what drove
-                        // Compose's interop removal into a crash while jumping through the contents.
+                        // Keep the native engine stable across chapter commits.
                         val onDocumentLoaded: () -> Unit = {
                                 if (highlight.isNotBlank()) {
                                     val targetOffset = offset; val targetFragment = fragment
                                     controller.find(highlight) { _, _ -> controller.jump(targetOffset, targetFragment) }
                                 }
                         }
-                        when (ReaderRouter.path(book.format, doc.fixed, com.custodysim.app.BuildConfig.EPISTEME_READER)) {
+                        when (ReaderRouter.path(book.format)) {
                             ReaderPath.NATIVE_TEXT -> NativeTextReader(doc, controller, tone, readingFont, lineHeight, family, mode,
                                 offset, { controls = !controls }, onDocumentLoaded, Modifier.fillMaxSize())
                             ReaderPath.EPISTEME -> EpistemeReader(doc, controller, container.readerRepository, chapter,
@@ -488,13 +483,7 @@ internal fun BookReader(container: AppContainer, book: LibraryBook, onBack: () -
                                     returnLocation = ReaderLocation(chapter, offset, controller.scrollFraction, fragment); move(target, 0, anchor)
                                 }, onControls = { controls = !controls }, onLoaded = onDocumentLoaded,
                                 onFailure = { if (!controller.loaded) error = it else notify(it) }, modifier = Modifier.fillMaxSize())
-                            else -> HtmlReader(doc, controller, container.readerRepository, book.id, chapter,
-                                tone, readingFont, lineHeight, family, mode, offset, fragment, initialScrollFraction,
-                                onLink = { target, anchor ->
-                                    returnLocation = ReaderLocation(chapter, offset, controller.scrollFraction, fragment); move(target, 0, anchor)
-                                }, onBoundary = { forward -> notify(if (forward) "已到全书末尾" else "已在全书开头") },
-                                onControls = { controls = !controls }, onLoaded = onDocumentLoaded,
-                                onFailure = { if (!controller.loaded) error = it else notify(it) }, modifier = Modifier.fillMaxSize())
+                            ReaderPath.NATIVE_PDF -> error("PDF uses its native document path")
                         }
                         if (!controller.loaded) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     }

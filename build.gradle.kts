@@ -14,8 +14,6 @@ buildscript {
 plugins {
     alias(libs.plugins.android.application) apply false
     id("com.android.library") version "9.4.1" apply false
-    alias(libs.plugins.android.test) apply false
-    alias(libs.plugins.androidx.baselineprofile) apply false
     alias(libs.plugins.kotlin.compose) apply false
 }
 
@@ -35,7 +33,6 @@ tasks.register<Zip>("androidCorrespondingSource") {
         include("*.gradle.kts", "gradle.properties", "gradlew", "gradlew.bat", "gradle/**")
         include("LICENSE", "LICENSES/**", "README-LICENSE.md", "README.md", "AGENTS.md", ".gitignore", ".gitattributes", "scripts/**", "docs/**")
         include("app/src/**", "app/*.gradle.kts", "app/*.pro", "app/lint*.xml")
-        include("readerbenchmark/src/**", "readerbenchmark/*.gradle.kts")
         include("episteme-core/src/**", "episteme-core/*.gradle.kts", "episteme-core/LICENSE", "episteme-core/README.md", "episteme-core/UPSTREAM.json")
         exclude("**/build/**", "**/.gradle/**", "**/.kotlin/**", "**/.idea/**")
         exclude("local.properties", "**/*.jks", "**/*.keystore", "**/*.pem", "**/*.p12", "**/*.iml", "**/.env*", "**/captures/**")

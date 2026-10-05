@@ -1,3 +1,5 @@
+> 当前状态（2026-10-06）：仅 debug/debugR8/production/release，全格式走原生阅读路径，旧 H5 引擎与性能变体已移除。以下保留为历史记录；当前构建与发布流程以 android-development.md 为准。
+
 # Migration record
 
 - Remote: https://github.com/PDSB001/CustodySim-app.git

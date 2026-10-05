@@ -8,14 +8,20 @@ Web 与服务端：https://github.com/PDSB001/CustodySim ，通过 HTTP API 协�
 配置本机 Android SDK（local.properties 的 sdk.dir）和 JDK 后，在仓库根运行：
 
 ```powershell
-.\gradlew.bat :app:assembleDevelopment
+.\gradlew.bat :app:assembleDebug
 .\gradlew.bat :app:testDebugUnitTest --tests 'com.custodysim.app.ui.library.*'
 .\gradlew.bat androidCorrespondingSource
 ```
 
 服务端地址在 App 设置内配置；私有构建配置仅放 local.properties 或环境变量，不入库。
-dev/development 的 EPUB/DOCX 使用 Episteme 原生阅读器；其他变体的引擎开关维持迁移前设置。
-TXT/PDF 分别使用原生文本和 PDF 路径。应用 ID 与签名配置方式保持不变。
+仅保留 debug、debugR8、production 和 release。EPUB/DOCX 统一使用 Episteme 原生阅读器，TXT/PDF 分别使用
+原生文本和 PDF 路径；旧 WebView 阅读器已移除。debug 保留联调应用 ID `.dev`，
+debugR8 使用相同联调地址并开启 R8。production 预置远端服务器，release 无预置地址；
+两者保留正式应用 ID 并开启 R8，未配置发布签名时产物为未签名 APK。
+
+日常开发在主项目目录内独立的 `.app-workspace` Git worktree 中进行，App 源码不提交到
+Web／服务端仓库。发布前提交 App 工作区，再通过主项目的 `scripts/sync-app-release.ps1`
+同步到独立发布目录；默认只构建，显式 `-Push` 才推送远程。
 
 ## 许可与发布
 

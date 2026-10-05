@@ -12,7 +12,7 @@ import kotlin.concurrent.withLock
 
 /** Private, bounded, atomically written cache. A checksum rejects partial or corrupt entries. */
 internal class ReaderDiskCache(private val directory: File, private val limit: Long = 128L * 1024 * 1024) {
-    // A replacement repository can overlap an old WebView's final resource requests. Share
+    // A replacement repository can overlap a previous native reader’s resource requests. Share
     // a bounded set of locks so both instances trim and replace the same directory safely.
     private val lock = directoryLocks[(directory.absoluteFile.normalize().path.hashCode() and Int.MAX_VALUE) % directoryLocks.size]
 

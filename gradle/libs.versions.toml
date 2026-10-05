@@ -15,8 +15,6 @@ junit = "4.13.2"
 backdrop = "2.0.1"
 androidSvg = "1.4"
 androidTestRunner = "1.7.0"
-benchmark = "1.5.0"
-uiautomator = "2.4.0"
 profileInstaller = "1.4.1"
 exifInterface = "1.4.2"
 # Reviewed Episteme dependency set; versions are pinned for reproducible imports.
@@ -59,13 +57,9 @@ backdrop-android = { module = "io.github.kyant0:backdrop-android", version.ref =
 androidsvg = { module = "com.caverock:androidsvg-aar", version.ref = "androidSvg" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidTestRunner" }
 androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "exifInterface" }
-androidx-benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmark" }
-androidx-test-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
 androidx-profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileInstaller" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-android-test = { id = "com.android.test", version.ref = "agp" }
-androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "benchmark" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

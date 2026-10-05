@@ -1,3 +1,5 @@
+> 当前状态（2026-10-06）：仅 debug/debugR8/production/release，全格式走原生阅读路径，旧 H5 引擎与性能变体已移除。以下保留为历史记录；当前构建与发布流程以 android-development.md 为准。
+
 # Android 真机性能复测
 
 > 历史实施与验证记录。版本、测试数量及设备表现按记录当时理解；当前操作入口见 [文档目录](README.md)。

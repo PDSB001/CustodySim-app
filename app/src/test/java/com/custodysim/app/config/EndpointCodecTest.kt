@@ -14,11 +14,19 @@ class EndpointCodecTest {
         assertEquals("é", EndpointCodec.decode("100,111"))
     }
 
-    @Test fun publicBuildsHaveNoEmbeddedEndpoint() {
-        if (BuildConfig.BUILD_TYPE in setOf("debug", "release")) {
+    @Test fun buildTypesRetainTheirApplicationIdentity() {
+        if (BuildConfig.BUILD_TYPE in setOf("release", "production")) {
+            assertEquals("com.custodysim.app", BuildConfig.APPLICATION_ID)
+            assertEquals(false, BuildConfig.NEEDS_LOCAL_NETWORK)
+        } else {
+            assertEquals("com.custodysim.app.dev", BuildConfig.APPLICATION_ID)
+        }
+    }
+
+    @Test fun releaseHasNoEmbeddedEndpoint() {
+        if (BuildConfig.BUILD_TYPE == "release") {
             assertEquals("", BuildConfig.BASE_URL_ENCODED)
             assertEquals("", BuildConfig.REALTIME_URL_ENCODED)
-            assertEquals(false, BuildConfig.NEEDS_LOCAL_NETWORK)
         }
     }
 }

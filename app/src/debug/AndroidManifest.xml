@@ -1,1 +1,10 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  仅开发构建生效：构建时从私有服务器配置生成网络策略，
+  只对配置中的 HTTP / WS 主机放行明文流量。
+  发布包不含这份清单，生产只走 HTTPS。
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+    <application android:networkSecurityConfig="@xml/network_security_config" />
+</manifest>

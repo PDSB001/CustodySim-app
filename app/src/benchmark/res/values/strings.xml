@@ -1,4 +1,0 @@
-<resources>
-    <string name="reader_benchmark_position" translatable="false">reader-position:%1$d:%2$d:%3$d</string>
-    <string name="reader_benchmark_sha" translatable="false">SHA256 %1$s</string>
-</resources>

@@ -1,3 +1,5 @@
+> 当前状态（2026-10-06）：仅 debug/debugR8/production/release，全格式走原生阅读路径，旧 H5 引擎与性能变体已移除。以下保留为历史记录；当前构建与发布流程以 android-development.md 为准。
+
 # Android 阅读器分格式翻页重构准备稿
 
 日期：2026-10-05。状态：已完成现状核对与技术方案；`HtmlReader` / `NativeTextReader` / `NativePdfReader`

@@ -28,3 +28,7 @@
 -keep class * extends androidx.work.InputMerger {
     public <init>();
 }
+# Jsoup 1.22.1 gates this optional regex engine behind a classpath check.
+# This app uses the JDK engine; see https://github.com/jhy/jsoup/issues/2459.
+-dontwarn com.google.re2j.Matcher
+-dontwarn com.google.re2j.Pattern

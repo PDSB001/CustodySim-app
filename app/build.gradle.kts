@@ -10,7 +10,6 @@ import org.gradle.api.tasks.TaskAction
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.androidx.baselineprofile)
 }
 
 abstract class GenerateNetworkSecurityConfig : DefaultTask() {
@@ -39,7 +38,7 @@ abstract class GenerateNetworkSecurityConfig : DefaultTask() {
     }
 }
 
-// 本机私有配置（android/local.properties，不入库）：服务端地址从这里取，真实域名不写进仓库。
+// 本机私有配置（local.properties，不入库）：服务端地址从这里取，真实域名不写进仓库。
 val localPropertiesFile = rootProject.file("local.properties")
 val localProperties = Properties().apply {
     if (localPropertiesFile.exists()) localPropertiesFile.inputStream().use { load(it) }
@@ -80,7 +79,7 @@ val configuredCleartextHosts = listOf(devBaseUrl, devRealtimeUrl).mapNotNull { u
 }.distinct()
 
 androidComponents.onVariants { variant ->
-    if (variant.buildType in listOf("development", "benchmark", "readerPerf", "nonMinifiedReaderPerf", "benchmarkReaderPerf")) {
+    if (variant.buildType in listOf("debug", "debugR8")) {
         val generator = tasks.register<GenerateNetworkSecurityConfig>(
             "generate${variant.name.replaceFirstChar { it.uppercase() }}NetworkSecurityConfig",
         ) {
@@ -108,7 +107,6 @@ android {
         buildConfigField("String", "BASE_URL_ENCODED", "\"\"")
         buildConfigField("String", "REALTIME_URL_ENCODED", "\"\"")
         buildConfigField("boolean", "NEEDS_LOCAL_NETWORK", "false")
-        buildConfigField("boolean", "EPISTEME_READER", "false")
     }
 
     buildFeatures {
@@ -121,7 +119,17 @@ android {
     }
 
     buildTypes {
+        debug {
+            isMinifyEnabled = false
+            isShrinkResources = false
+            applicationIdSuffix = ".dev"
+            buildConfigField("boolean", "NEEDS_LOCAL_NETWORK", needsLocalNetwork.toString())
+            buildConfigField("String", "BASE_URL_ENCODED", "\"${encodedUrl(devBaseUrl)}\"")
+            buildConfigField("String", "REALTIME_URL_ENCODED", "\"${encodedUrl(devRealtimeUrl)}\"")
+        }
         release {
+            buildConfigField("String", "BASE_URL_ENCODED", "\"\"")
+            buildConfigField("String", "REALTIME_URL_ENCODED", "\"\"")
             buildConfigField("boolean", "NEEDS_LOCAL_NETWORK", "false")
             isMinifyEnabled = true
             // 代码收缩必须配套资源收缩，否则未引用的图标/字符串/布局仍会进包。
@@ -133,35 +141,24 @@ android {
                 "proguard-rules.pro",
             )
         }
+        create("debugR8") {
+            initWith(getByName("debug"))
+            matchingFallbacks += "debug"
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
         create("production") {
             initWith(getByName("release"))
-            signingConfig = signingConfigs.getByName("debug") // Local installation; not a publishing key.
-            matchingFallbacks += listOf("release")
+            matchingFallbacks += "release"
             buildConfigField("String", "BASE_URL_ENCODED", "\"${encodedUrl(productionBaseUrl)}\"")
             buildConfigField("String", "REALTIME_URL_ENCODED", "\"${encodedUrl(productionRealtimeUrl)}\"")
         }
-        create("development") {
-            initWith(getByName("debug"))
-            signingConfig = signingConfigs.getByName("debug") // Local installation; not a publishing key.
-            matchingFallbacks += listOf("debug")
-            applicationIdSuffix = ".dev"
-            buildConfigField("boolean", "EPISTEME_READER", "true")
-            buildConfigField("boolean", "NEEDS_LOCAL_NETWORK", needsLocalNetwork.toString())
-            buildConfigField("String", "BASE_URL_ENCODED", "\"${encodedUrl(devBaseUrl)}\"")
-            buildConfigField("String", "REALTIME_URL_ENCODED", "\"${encodedUrl(devRealtimeUrl)}\"")
-        }
-        create("benchmark") {
-            initWith(getByName("release"))
-            signingConfig = signingConfigs.getByName("debug") // Local installation; not a publishing key.
-            matchingFallbacks += listOf("release")
-            applicationIdSuffix = ".dev"
-            buildConfigField("boolean", "NEEDS_LOCAL_NETWORK", needsLocalNetwork.toString())
-            buildConfigField("String", "BASE_URL_ENCODED", "\"${encodedUrl(devBaseUrl)}\"")
-            buildConfigField("String", "REALTIME_URL_ENCODED", "\"${encodedUrl(devRealtimeUrl)}\"")
-        }
-        create("readerPerf") {
-            initWith(getByName("benchmark"))
-        }
+    }
+
+    sourceSets.getByName("debugR8") {
+        manifest.srcFile("src/debug/AndroidManifest.xml")
+        res.srcDir("src/debug/res")
     }
 
     // 内置 Kotlin 下 jvmTarget 默认等于这里的 targetCompatibility，无需再显式设置。
@@ -202,39 +199,4 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.runner)
-    baselineProfile(project(":readerbenchmark"))
-}
-
-baselineProfile {
-    automaticGenerationDuringBuild = false
-    mergeIntoMain = false
-    saveInSrc = true
-    filter {
-        include("com.custodysim.app.**")
-        exclude("com.custodysim.app.benchmark.**")
-    }
-}
-
-// Profile generation keeps the benchmark-only fixture harness, never the production manifest.
-androidComponents.finalizeDsl {
-    listOf("readerPerf", "nonMinifiedReaderPerf", "benchmarkReaderPerf").forEach { name ->
-        it.sourceSets.findByName(name)?.apply {
-            kotlin.directories.add("src/benchmark/java")
-            assets.directories.add("src/benchmark/assets")
-            res.directories.add("src/benchmark/res")
-            manifest.srcFile("src/benchmark/AndroidManifest.xml")
-        }
-    }
-}
-
-// A public build requires no private settings. Check only requested private variants.
-val productionConfigured = productionBaseUrl.startsWith("https://") && productionRealtimeUrl.startsWith("wss://")
-val developmentConfigured = devBaseUrl.isNotBlank() && devRealtimeUrl.isNotBlank()
-tasks.matching { it.name == "preProductionBuild" }.configureEach {
-    val configured = productionConfigured
-    doFirst { check(configured) { "production requires private HTTPS and WSS server settings" } }
-}
-tasks.matching { it.name in listOf("preDevelopmentBuild", "preBenchmarkBuild", "preReaderPerfBuild", "preNonMinifiedReaderPerfBuild", "preBenchmarkReaderPerfBuild") }.configureEach {
-    val configured = developmentConfigured
-    doFirst { check(configured) { "development requires private baseUrl and realtimeUrl settings" } }
 }

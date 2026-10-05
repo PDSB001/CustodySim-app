@@ -7,15 +7,13 @@ internal data class ReaderAnchor(val chapter: Int, val offset: Int = 0, val frag
 internal data class ReaderPosition(val anchor: ReaderAnchor, val screen: Int = 1, val screens: Int = 1,
     val atStart: Boolean = true, val atEnd: Boolean = true)
 
-internal enum class ReaderPath { NATIVE_TEXT, EPISTEME, HTML_FLOW, HTML_FIXED, NATIVE_PDF }
+internal enum class ReaderPath { NATIVE_TEXT, EPISTEME, NATIVE_PDF }
 
 internal object ReaderRouter {
-    fun path(format: String, fixed: Boolean = false, episteme: Boolean = false): ReaderPath = when {
-        format == "PDF" -> ReaderPath.NATIVE_PDF
-        format == "TXT" -> ReaderPath.NATIVE_TEXT
-        episteme -> ReaderPath.EPISTEME
-        fixed -> ReaderPath.HTML_FIXED
-        else -> ReaderPath.HTML_FLOW
+    fun path(format: String): ReaderPath = when (format) {
+        "PDF" -> ReaderPath.NATIVE_PDF
+        "TXT" -> ReaderPath.NATIVE_TEXT
+        else -> ReaderPath.EPISTEME
     }
 }
 

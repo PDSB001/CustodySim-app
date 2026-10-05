@@ -7,13 +7,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class EpistemeAnchorsTest {
-    @Test fun developmentNativeRouteNeverFallsBackToWebViewForRichDocuments() {
-        assertEquals(ReaderPath.EPISTEME, ReaderRouter.path("EPUB", episteme = true))
-        assertEquals(ReaderPath.EPISTEME, ReaderRouter.path("EPUB", fixed = true, episteme = true))
-        assertEquals(ReaderPath.EPISTEME, ReaderRouter.path("DOCX", episteme = true))
-        assertEquals(ReaderPath.NATIVE_TEXT, ReaderRouter.path("TXT", episteme = true))
-        assertEquals(ReaderPath.NATIVE_PDF, ReaderRouter.path("PDF", episteme = true))
-        assertEquals(ReaderPath.HTML_FLOW, ReaderRouter.path("EPUB"))
+    @Test fun allBuildsUseNativeReadersForEverySupportedFormat() {
+        assertEquals(ReaderPath.EPISTEME, ReaderRouter.path("EPUB"))
+        assertEquals(ReaderPath.EPISTEME, ReaderRouter.path("DOCX"))
+        assertEquals(ReaderPath.NATIVE_TEXT, ReaderRouter.path("TXT"))
+        assertEquals(ReaderPath.NATIVE_PDF, ReaderRouter.path("PDF"))
     }
     @Test fun nativeUtf16SplitsKeepServerCodePointOffsets() {
         val block = ParagraphBlock(AnnotatedString("开头😀后文"), blockIndex = 0)

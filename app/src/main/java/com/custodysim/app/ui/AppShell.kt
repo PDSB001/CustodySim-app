@@ -267,8 +267,7 @@ fun AppShell(container: AppContainer, session: SessionUser, onLogout: () -> Unit
         AnimatedVisibility(
             visible = showLibrary,
             modifier = Modifier.fillMaxSize(),
-            // The library can restore an open WebView. Animate translation only: fading its
-            // ancestor creates an offscreen layer that can blank the native reading surface.
+            // Keep the native reading surface translating with the library transition.
             enter = slideInHorizontally(tween(if (effects.reduceMotion) 0 else 260, easing = FastOutSlowInEasing)) { it },
             exit = slideOutHorizontally(tween(if (effects.reduceMotion) 0 else 220, easing = FastOutSlowInEasing)) { it },
         ) {
