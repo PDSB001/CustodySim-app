@@ -42,18 +42,6 @@ object LocationScheduler {
         )
     }
 
-    /** 唤醒一次到期检查；用户主动上报由首页单独处理。 */
-    fun reportNow(context: Context) {
-        val request = OneTimeWorkRequestBuilder<LocationReportWorker>()
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
-            .build()
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            ONCE_WORK,
-            ExistingWorkPolicy.KEEP,
-            request,
-        )
-    }
-
     /** 应用内修改周期后立即替换旧的周期任务。 */
     fun reschedule(context: Context, intervalMinutes: Long = LocationPreferences.intervalMinutes(context)) {
         ensurePeriodic(context, intervalMinutes)

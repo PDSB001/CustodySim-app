@@ -22,6 +22,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -48,7 +49,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 private const val UNKNOWN_VALUE = "—"
 private const val UNREAD_HINT = "尚未读取"
 
-/** 每张概览卡并排显示几项：一屏看 2 项，比"一页一项"更密。 */
+/** 普通字号下每张概览卡并排显示两项。 */
 private const val BLOCKS_PER_PAGE = 2
 
 /** 定位概览页的文案由 HomeScreen 解析后传入，概览自身不关心权限实现。 */
@@ -164,19 +165,20 @@ private fun locationBlock(location: LocationOverview, palette: OverviewPalette) 
     onClick = null,
 )
 
-/** 定位概览排第一页，其余每页 2 项；页序在进入 pager 前定型。 */
+/** 定位概览排第一页，其余按可用空间分组；页序在进入 pager 前定型。 */
 private fun overviewPages(
     blocks: List<OverviewBlock>,
     location: LocationOverview?,
     palette: OverviewPalette,
+    blocksPerPage: Int,
 ): List<List<OverviewBlock>> = buildList {
     location?.let { add(listOf(locationBlock(it, palette))) }
-    blocks.chunked(BLOCKS_PER_PAGE).forEach { add(it) }
+    blocks.chunked(blocksPerPage).forEach { add(it) }
 }
 
 /**
  * 首页概览：定位概览卡与指标卡同处一组左右横划的整宽浅色卡（与「定位上报」同形态），
- * 每张卡并排放 2 项，兼顾信息密度与单页可读性。
+ * 普通字号下每张卡并排放两项，窄屏或大字号下每页一项。
  */
 @Composable
 internal fun HomeOverviewSection(
@@ -187,9 +189,8 @@ internal fun HomeOverviewSection(
     val scheme = MiuixTheme.colorScheme
     val palette = OverviewPalette(primary = scheme.primary, error = scheme.error,
         success = AppColors.success, warning = AppColors.warning, muted = scheme.onSurfaceVariantSummary)
-    val pages = overviewPages(
-        overviewBlocks(overview, supervised, palette, onNavigate, onNotices), location, palette,
-    )
+    val blocks = overviewBlocks(overview, supervised, palette, onNavigate, onNotices)
+    val fontScale = LocalDensity.current.fontScale
 
     Column {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -219,18 +220,24 @@ internal fun HomeOverviewSection(
             }
             Spacer(Modifier.height(AppSpace.medium))
         }
-        val pager = rememberPagerState { pages.size }
-        HorizontalPager(
-            state = pager,
-            pageSpacing = AppSpace.medium,
-            // 预组合相邻页：各页卡片结构一致、高度相同，这里只是让横划时视口高度提前稳定。
-            beyondViewportPageCount = 1,
-            verticalAlignment = Alignment.Top,
-            modifier = Modifier.fillMaxWidth(),
-        ) { index ->
-            OverviewCard(pages[index])
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            // 两栏在窄屏或大字号下空间不足，保留横滑方式并让每项占满卡片。
+            val blocksPerPage = if (maxWidth < 320.dp || fontScale > 1.25f) 1 else BLOCKS_PER_PAGE
+            val pages = overviewPages(blocks, location, palette, blocksPerPage)
+            val pager = rememberPagerState { pages.size }
+            Column {
+                HorizontalPager(
+                    state = pager,
+                    pageSpacing = AppSpace.medium,
+                    beyondViewportPageCount = 1,
+                    verticalAlignment = Alignment.Top,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { index ->
+                    OverviewCard(pages[index])
+                }
+                if (pages.size > 1) PagerDots(count = pages.size, pager = pager)
+            }
         }
-        if (pages.size > 1) PagerDots(count = pages.size, pager = pager)
     }
 }
 
@@ -264,7 +271,7 @@ private fun MetricBlock(block: OverviewBlock, modifier: Modifier = Modifier) {
     )) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(AppSpace.tiny)) {
-            Text(block.label, style = MiuixTheme.textStyles.footnote1,
+            Text(block.label, style = MiuixTheme.textStyles.footnote1, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 color = scheme.onSurfaceVariantSummary, modifier = Modifier.weight(1f))
             block.icon?.let {
                 Icon(it, contentDescription = null, modifier = Modifier.size(16.dp), tint = block.tone)
@@ -274,7 +281,8 @@ private fun MetricBlock(block: OverviewBlock, modifier: Modifier = Modifier) {
         AnimatedContent(targetState = block.value,
             transitionSpec = { fadeIn(tween(duration)) togetherWith fadeOut(tween(duration)) using null },
             label = "overview-value") { value ->
-            Text(value, style = MiuixTheme.textStyles.title2, color = block.tone, maxLines = 1)
+            Text(value, style = MiuixTheme.textStyles.title2, color = block.tone, maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.height(AppSpace.tiny))
         // 固定两行说明位：同卡两块、以及左右各页的文案长短不一，卡片高度都不会跟着跳。

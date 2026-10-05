@@ -5,12 +5,11 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val chatTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.getDefault())
-    .withZone(ZoneId.systemDefault())
+private val chatTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.ROOT)
 
 /** The API sends UTC instants (ISO-8601 with Z); render them in the device's local time zone. */
 internal fun formatChatTime(value: String): String = runCatching {
-    chatTimeFormatter.format(Instant.parse(value))
+    chatTimeFormatter.format(Instant.parse(value).atZone(ZoneId.systemDefault()))
 }.getOrElse {
     value.replace('T', ' ').take(16)
 }

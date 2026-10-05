@@ -75,7 +75,15 @@ private fun LoginContent(
     val focus = LocalFocusManager.current
     val haptics = LocalHapticFeedback.current
     val trustLabel = stringResource(R.string.trust_device)
-    BackHandler(mfaRequired && !busy) { onCancelMfa() }
+    val cancelMfa: () -> Unit = {
+        if (!busy) {
+            focus.clearFocus()
+            onCancelMfa()
+        }
+    }
+    // Keep owning Back during verification so a pending request cannot fall
+    // through to the Activity's exit action.
+    BackHandler(mfaRequired) { cancelMfa() }
     LaunchedEffect(mfaRequired) { password = ""; code = ""; trustDevice = false }
     val canSubmit = !busy && retrySeconds == 0L && if (mfaRequired) code.trim().length >= 6
         else username.isNotBlank() && password.isNotBlank()
@@ -92,7 +100,7 @@ private fun LoginContent(
                 title = stringResource(if (mfaRequired) R.string.mfa_title else R.string.login),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
-                    if (mfaRequired) IconButton(onClick = onCancelMfa, enabled = !busy) {
+                    if (mfaRequired) IconButton(onClick = cancelMfa, enabled = !busy) {
                         Icon(MiuixIcons.Back, stringResource(R.string.back_to_login))
                     }
                 },

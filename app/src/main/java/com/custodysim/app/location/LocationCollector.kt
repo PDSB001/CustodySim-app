@@ -17,6 +17,7 @@ import com.custodysim.app.data.location.PendingPoint
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 采集一个定位点并转换成服务端要求的 GCJ02。
@@ -52,9 +53,9 @@ class LocationCollector(private val context: Context) {
         if (!hasForegroundPermission()) return@withLock null
 
         val known = if (allowCached) lastKnown() else null
-        val fix = withTimeoutOrNull(FIX_TIMEOUT_MS) {
+        val fix = withTimeoutOrNull(FIX_TIMEOUT_MS.milliseconds) {
             known?.takeIf { isFresh(it) } ?: providers().firstNotNullOfOrNull { provider ->
-                withTimeoutOrNull(if (provider == LocationManager.NETWORK_PROVIDER) 5_000L else 10_000L) {
+                withTimeoutOrNull((if (provider == LocationManager.NETWORK_PROVIDER) 5_000L else 10_000L).milliseconds) {
                     requestSingleFix(provider)?.takeIf { isFresh(it) }
                 }
             }

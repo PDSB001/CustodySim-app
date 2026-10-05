@@ -1,54 +1,97 @@
 package com.custodysim.app.ui.mine
-import androidx.compose.foundation.background
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.Alignment
+import android.widget.Toast
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.runtime.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.custodysim.app.AppContainer
 import com.custodysim.app.R
 import com.custodysim.app.data.net.ApiResult
-import com.custodysim.app.data.portal.*
-import com.custodysim.app.ui.common.*
-import com.custodysim.app.ui.theme.*
-import kotlinx.coroutines.launch
+import com.custodysim.app.data.portal.PROFILE_IMAGE_MAX_COUNT
+import com.custodysim.app.data.portal.PortalNotice
+import com.custodysim.app.data.portal.ProfileForm
+import com.custodysim.app.data.portal.ProfileImageGenerator
+import com.custodysim.app.data.portal.ProfileRecord
+import com.custodysim.app.data.portal.ProfileSummary
+import com.custodysim.app.data.portal.cacheProfileFieldValue
+import com.custodysim.app.data.portal.decodeProfileImages
+import com.custodysim.app.data.portal.profileFieldsPayload
+import com.custodysim.app.ui.common.DatePreference
+import com.custodysim.app.ui.common.FramedTextField
+import com.custodysim.app.ui.common.GroupedListItem
+import com.custodysim.app.ui.common.ImageThumbs
+import com.custodysim.app.ui.common.LocalAppSnackbar
+import com.custodysim.app.ui.common.NoticeBanner
+import com.custodysim.app.ui.common.OverlaySheet
+import com.custodysim.app.ui.common.PageState
+import com.custodysim.app.ui.common.SectionTitle
+import com.custodysim.app.ui.common.SettingGroup
+import com.custodysim.app.ui.common.StatusChip
+import com.custodysim.app.ui.common.rememberAppListState
+import com.custodysim.app.ui.common.rememberDataUrlImage
+import com.custodysim.app.ui.common.rememberFormDraft
+import com.custodysim.app.ui.common.rememberImagePicker
+import com.custodysim.app.ui.theme.AppShape
+import com.custodysim.app.ui.theme.AppSpace
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.HorizontalDivider
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
-import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.preference.SwitchPreference
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Promotions
 import top.yukonga.miuix.kmp.icon.extended.Notes
 import top.yukonga.miuix.kmp.icon.extended.Photos
+import top.yukonga.miuix.kmp.icon.extended.Promotions
+import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import androidx.compose.ui.res.stringResource
-import android.widget.Toast
 
 private enum class HubPanel(val title: Int) {
     ARCHIVES(R.string.portal_archives)
@@ -170,14 +213,19 @@ fun AccountHub(container: AppContainer, allowEditing: Boolean = true) {
                             // 字段解析只在档案数据变化时做一次：导出中/预览等状态一变，整张卡片都会重组。
                             val fieldRows = remember(item) {
                                 item.fields.mapNotNull { field ->
-                                    item.data.optString(field.name).takeIf { it.isNotBlank() && it != "null" }
-                                        ?.let { field.name to it }
+                                    val images = if (field.type == "IMAGE") decodeProfileImages(item.data.opt(field.name)) else emptyList()
+                                    val value = if (field.type == "IMAGE") "" else item.data.optString(field.name).takeIf { it != "null" }.orEmpty()
+                                    if (images.isNotEmpty() || value.isNotBlank()) Triple(field, value, images) else null
                                 }
                             }
-                            fieldRows.forEach { (label, value) ->
+                            fieldRows.forEach { (field, value, images) ->
                                 HorizontalDivider(color = MiuixTheme.colorScheme.onSurfaceVariantSummary.copy(alpha = 0.12f))
-                                if (value.startsWith("data:image/")) ArchiveImage(label, value, ContentScale.Fit)
-                                else BasicComponent(title = label, summary = value,
+                                if (field.type == "IMAGE") {
+                                    Text("${field.name} · ${images.size} 张图片", style = MiuixTheme.textStyles.footnote1,
+                                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                                    ImageThumbs(images)
+                                } else if (value.startsWith("data:image/")) ArchiveImage(field.name, value, ContentScale.Fit)
+                                else BasicComponent(title = field.name, summary = value,
                                     insideMargin = PaddingValues(vertical = AppSpace.small))
                             }
                             HorizontalDivider(color = MiuixTheme.colorScheme.onSurfaceVariantSummary.copy(alpha = .10f))
@@ -332,11 +380,13 @@ fun NoticeSheet(container: AppContainer, show: Boolean, onDismiss: () -> Unit) {
 private fun ProfileFormsSheet(container: AppContainer, show: Boolean, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
     var forms by remember { mutableStateOf<List<ProfileForm>>(emptyList()) }
     var records by remember { mutableStateOf<List<ProfileRecord>>(emptyList()) }
     var selectedIndex by remember { mutableIntStateOf(0) }
     var values by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var photo by remember { mutableStateOf<String?>(null) }
+    var photoPickerFormId by remember { mutableStateOf<String?>(null) }
     var signatureMode by remember { mutableStateOf("GENERATED") }
     var handwrittenSignature by remember { mutableStateOf<String?>(null) }
     var communityShare by remember { mutableStateOf(false) }
@@ -344,7 +394,8 @@ private fun ProfileFormsSheet(container: AppContainer, show: Boolean, onDismiss:
     var showSignatureEditor by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var busyAction by remember { mutableStateOf<String?>(null) }
-    val busy = busyAction != null
+    var processingImages by remember { mutableStateOf<Set<String>>(emptySet()) }
+    val busy = busyAction != null || processingImages.isNotEmpty()
     var error by remember { mutableStateOf<String?>(null) }
     var loadError by remember { mutableStateOf<String?>(null) }
     var revision by remember { mutableIntStateOf(0) }
@@ -354,6 +405,11 @@ private fun ProfileFormsSheet(container: AppContainer, show: Boolean, onDismiss:
     val editable = selectedRecord == null || selectedRecord.status == "DRAFT" || selectedRecord.status == "RETURNED"
     val draft = rememberFormDraft(container, "profile:${selectedForm?.id}:${selectedRecord?.updatedAt.orEmpty()}")
     val snackbar = LocalAppSnackbar.current
+    fun openSignatureEditor() {
+        focus.clearFocus()
+        keyboard?.hide()
+        showSignatureEditor = true
+    }
     fun persistDraft() {
         draft.replace(values.mapKeys { "field:${it.key}" } + mapOf("photo" to photo,
             "signatureMode" to signatureMode, "handwrittenSignature" to handwrittenSignature,
@@ -368,11 +424,11 @@ private fun ProfileFormsSheet(container: AppContainer, show: Boolean, onDismiss:
     }
     suspend fun saveProfileDraft(action: String = "save") {
         val form = selectedForm ?: return
-        if (busyAction != null) return
+        if (busyAction != null || processingImages.isNotEmpty()) return
         focus.clearFocus()
         busyAction = action; error = null
         try {
-            val data = org.json.JSONObject().apply { values.forEach { (key, value) -> put(key, value) } }
+            val data = profileFieldsPayload(form.fields, values)
             when (val result = container.portalRepository.saveProfileRecord(form.id, data, photo,
                 signatureMode, handwrittenSignature, communityShare, shareFields.toList())) {
                 is ApiResult.Ok -> {
@@ -387,7 +443,16 @@ private fun ProfileFormsSheet(container: AppContainer, show: Boolean, onDismiss:
             }
         } finally { busyAction = null }
     }
-    val photoPicker = rememberImagePicker(1) { urls -> photo = urls.firstOrNull(); persistDraft() }
+    val photoPicker = rememberImagePicker(1,
+        onProcessingChanged = { active -> processingImages = if (active) processingImages + "photo" else processingImages - "photo" },
+    ) { urls ->
+        val target = photoPickerFormId
+        photoPickerFormId = null
+        if (target != null && target == selectedForm?.id) {
+            photo = urls.firstOrNull()
+            persistDraft()
+        } else snackbar("档案分卷已变化，请重新选择图片")
+    }
     // 「罩杯」只对女性适用（与 Web 端一致）。用 derivedStateOf 只订阅「性别」这一个键，
     // 这样输入其它字段时不会把这张表牵进来重组。
     val gender by remember { derivedStateOf { values["性别"].orEmpty() } }
@@ -395,6 +460,9 @@ private fun ProfileFormsSheet(container: AppContainer, show: Boolean, onDismiss:
         selectedForm?.fields?.filterNot { it.name == "罩杯" && gender != "女" } ?: emptyList()
     }
     val fieldSections = remember(visibleFields) { visibleFields.groupBy { profileSection(it.name) } }
+    val finalSingleLineField = remember(fieldSections) {
+        fieldSections.values.flatten().lastOrNull { it.type !in setOf("SELECT", "DATE", "TEXTAREA", "COPYWRITE", "IMAGE") }?.name
+    }
     LaunchedEffect(show, revision) {
         if (!show) return@LaunchedEffect
         loading = true; error = null; loadError = null
@@ -414,9 +482,8 @@ private fun ProfileFormsSheet(container: AppContainer, show: Boolean, onDismiss:
     LaunchedEffect(show, selectedForm?.id, selectedRecord?.updatedAt, draft.ready, loading) {
         if (!show || !draft.ready || loading) return@LaunchedEffect
         selectedForm?.let { form ->
-            values = form.fields.associate { field -> field.name to (
-                (if (editable) draft.values["field:${field.name}"] as? String else null)
-                    ?: selectedRecord?.data?.optString(field.name)?.takeIf { it != "null" } ?: "") }
+            values = form.fields.associate { field -> field.name to cacheProfileFieldValue(field.type,
+                (if (editable) draft.values["field:${field.name}"] else null) ?: selectedRecord?.data?.opt(field.name)) }
             photo = if (editable && draft.values.containsKey("photo")) draft.values["photo"] as? String else selectedRecord?.photoData
             signatureMode = (if (editable) draft.values["signatureMode"] as? String else null)
                 ?: selectedRecord?.signatureMode ?: "GENERATED"
@@ -498,7 +565,7 @@ private fun ProfileFormsSheet(container: AppContainer, show: Boolean, onDismiss:
                         val photoBitmap = rememberDataUrlImage(photo)
                         Box(Modifier.size(72.dp, 92.dp).clip(RoundedCornerShape(12.dp))
                             .background(MiuixTheme.colorScheme.surface), contentAlignment = Alignment.Center) {
-                            if (photoBitmap != null) Image(photoBitmap, "证件照", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            if (photoBitmap != null) Image(photoBitmap, "证件照", Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
                             else Icon(MiuixIcons.Photos, null, tint = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                         }
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(AppSpace.small)) {
@@ -509,7 +576,11 @@ private fun ProfileFormsSheet(container: AppContainer, show: Boolean, onDismiss:
                             TextButton(
                                 text = stringResource(if (photo != null) R.string.change_photo else R.string.add_photo),
                                 enabled = !busy,
-                                onClick = photoPicker,
+                                onClick = {
+                                    focus.clearFocus(); keyboard?.hide()
+                                    photoPickerFormId = selectedForm.id
+                                    photoPicker()
+                                },
                                 colors = ButtonDefaults.textButtonColors(textColor = MiuixTheme.colorScheme.primary),
                             )
                             if (photo != null) TextButton(
@@ -534,6 +605,60 @@ private fun ProfileFormsSheet(container: AppContainer, show: Boolean, onDismiss:
                     // 必填项标签带 *（与 Web 端一致），说明见上方提示。
                     val label = if (field.required) "${field.name} *" else field.name
                     when (field.type) {
+                        "IMAGE" -> Column(
+                            Modifier.fillMaxWidth().padding(horizontal = AppSpace.page, vertical = AppSpace.small),
+                            verticalArrangement = Arrangement.spacedBy(AppSpace.small),
+                        ) {
+                            Text(label, style = MiuixTheme.textStyles.body1)
+                            val images = remember(value) { decodeProfileImages(value) }
+                            val processingKey = "field:${field.name}"
+                            var pickerTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
+                            if (images.isNotEmpty()) ImageThumbs(images, onRemove = if (!busy && editable) { index ->
+                                val next = images.filterIndexed { imageIndex, _ -> imageIndex != index }
+                                updateValues(values + (field.name to cacheProfileFieldValue("IMAGE", next)))
+                            } else null)
+                            val picker = rememberImagePicker((PROFILE_IMAGE_MAX_COUNT - images.size).coerceAtLeast(1),
+                                onProcessingChanged = { active ->
+                                    processingImages = if (active) processingImages + processingKey else processingImages - processingKey
+                                },
+                            ) { picked ->
+                                val target = pickerTarget
+                                pickerTarget = null
+                                if (target == (selectedForm.id to field.name)) {
+                                    val next = (decodeProfileImages(values[field.name]) + picked).take(PROFILE_IMAGE_MAX_COUNT)
+                                    updateValues(values + (field.name to cacheProfileFieldValue("IMAGE", next)))
+                                } else snackbar("档案分卷已变化，请重新选择图片")
+                            }
+                            if (editable) TextButton(
+                                text = if (processingKey in processingImages) "图片处理中…"
+                                    else "添加图片（${images.size}/$PROFILE_IMAGE_MAX_COUNT）",
+                                enabled = !busy && images.size < PROFILE_IMAGE_MAX_COUNT,
+                                onClick = {
+                                    focus.clearFocus(); keyboard?.hide()
+                                    pickerTarget = selectedForm.id to field.name
+                                    picker()
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.textButtonColorsPrimary(),
+                            )
+                            Text("最多 3 张，图片不会分享到社区。", style = MiuixTheme.textStyles.footnote2,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                        }
+                        "COPYWRITE" -> Column(
+                            Modifier.fillMaxWidth().padding(horizontal = AppSpace.page, vertical = AppSpace.small),
+                            verticalArrangement = Arrangement.spacedBy(AppSpace.small),
+                        ) {
+                            Text(label, style = MiuixTheme.textStyles.body1)
+                            Text(field.options.firstOrNull()?.takeIf { it.isNotBlank() } ?: "此字段未设置抄写原文",
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                            FramedTextField(
+                                value = value, onValueChange = { updateValues(values + (field.name to it)) },
+                                label = stringResource(R.string.copywrite_input), enabled = !busy && editable,
+                                minLines = 3, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
                         "SELECT" -> OverlayDropdownPreference(
                             title = label, items = listOf("请选择") + field.options,
                             selectedIndex = (field.options.indexOf(value) + 1).coerceAtLeast(0), enabled = !busy && editable,
@@ -555,9 +680,16 @@ private fun ProfileFormsSheet(container: AppContainer, show: Boolean, onDismiss:
                             singleLine = field.type != "TEXTAREA",
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = if (field.type == "NUMBER") KeyboardType.Decimal else KeyboardType.Text,
-                                imeAction = if (field.type == "TEXTAREA") ImeAction.Default else ImeAction.Next,
+                                imeAction = when {
+                                    field.type == "TEXTAREA" -> ImeAction.Default
+                                    field.name == finalSingleLineField -> ImeAction.Done
+                                    else -> ImeAction.Next
+                                },
                             ),
-                            keyboardActions = KeyboardActions(onNext = { focus.moveFocus(FocusDirection.Down) }),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focus.moveFocus(FocusDirection.Down) },
+                                onDone = { focus.clearFocus() },
+                            ),
                             modifier = Modifier.fillMaxWidth().padding(horizontal = AppSpace.page, vertical = AppSpace.small))
                     }
                     if (index != fields.lastIndex) HorizontalDivider(Modifier.padding(horizontal = AppSpace.page),
@@ -582,7 +714,7 @@ private fun ProfileFormsSheet(container: AppContainer, show: Boolean, onDismiss:
                                 onSelectedIndexChange = { index ->
                                     if (index == 0) {
                                         signatureMode = "GENERATED"; handwrittenSignature = null; persistDraft()
-                                    } else showSignatureEditor = true
+                                    } else openSignatureEditor()
                                 })
                             ArchiveImage("签名预览",
                                 if (signatureMode == "HANDWRITTEN") handwrittenSignature
@@ -590,7 +722,7 @@ private fun ProfileFormsSheet(container: AppContainer, show: Boolean, onDismiss:
                                 ContentScale.Fit, emptyText = if (signatureMode == "HANDWRITTEN") "请签写后保存"
                                     else "保存草稿时，服务器将按当前账户姓名生成规范签名。")
                             if (signatureMode == "HANDWRITTEN" && editable) TextButton("重新签写",
-                                enabled = !busy, onClick = { showSignatureEditor = true },
+                                enabled = !busy, onClick = { openSignatureEditor() },
                                 modifier = Modifier.fillMaxWidth())
                             if (signatureMode == "GENERATED" && editable) TextButton(
                                 if (busyAction == "signature") "生成并保存中…" else "生成规范签名并保存草稿",
@@ -630,11 +762,11 @@ private fun ProfileFormsSheet(container: AppContainer, show: Boolean, onDismiss:
                             if (record.status == "DRAFT" || record.status == "RETURNED") TextButton(
                                 text = if (busyAction == "submit") "提交中…" else "提交会签", enabled = !busy, onClick = {
                                     scope.launch {
-                                        if (busyAction != null) return@launch
+                                        if (busyAction != null || processingImages.isNotEmpty()) return@launch
                                         focus.clearFocus()
                                         busyAction = "submit"; error = null
                                         try {
-                                            val data = org.json.JSONObject().apply { values.forEach { (key, value) -> put(key, value) } }
+                                            val data = profileFieldsPayload(selectedForm.fields, values)
                                             val saved = container.portalRepository.saveProfileRecord(selectedForm.id, data, photo,
                                                 signatureMode, handwrittenSignature, communityShare, shareFields.toList())
                                             val result = if (saved is ApiResult.Err) saved else container.portalRepository.submitProfileRecord(record.id)

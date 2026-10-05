@@ -299,7 +299,9 @@ private fun CommunityWorkspace(container: AppContainer, onClose: () -> Unit, sna
                             enabled = active && !busy && !preparingImages && draft.ready && title.isNotBlank() && (body.isNotBlank() || images.isNotEmpty()),
                             onClick = ::publish,
                         ) else {
-                            CommunityRefreshButton(detailLoading, active && !detailLoading && !busy, { error = null; detailLoading = true; detailRevision++ })
+                            CommunityRefreshButton(detailLoading, active && !detailLoading && !busy) {
+                                error = null; detailLoading = true; detailRevision++
+                            }
                             if (article?.post?.canDelete == true) CommunityActionIconButton(
                                 onClick = { requestDelete("posts", article.post.id) }, enabled = active && !busy,
                             ) { Icon(MiuixIcons.Delete, "删除帖子") }

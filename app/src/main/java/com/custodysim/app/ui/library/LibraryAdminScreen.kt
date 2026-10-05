@@ -5,38 +5,78 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.custodysim.app.AppContainer
 import com.custodysim.app.data.net.ApiClient
 import com.custodysim.app.data.net.ApiResult
-import com.custodysim.app.ui.common.*
-import com.custodysim.app.ui.theme.AppSpace
+import com.custodysim.app.ui.common.NoticeBanner
+import com.custodysim.app.ui.common.PageState
+import com.custodysim.app.ui.common.PrimaryAction
+import com.custodysim.app.ui.common.SettingGroup
+import com.custodysim.app.ui.common.rememberRemoteImageState
+import com.custodysim.app.ui.common.softTextFieldColors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import top.yukonga.miuix.kmp.basic.*
+import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SnackbarHost
+import top.yukonga.miuix.kmp.basic.SnackbarHostState
+import top.yukonga.miuix.kmp.basic.TabRowWithContour
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.overScrollVertical
 
 private data class PickedFile(val uri: Uri, val name: String)
 private fun JSONArray?.objects() = (0 until (this?.length() ?: 0)).mapNotNull { this?.optJSONObject(it) }
@@ -46,6 +86,7 @@ internal fun LibraryAdminScreen(container: AppContainer, onClose: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
+    val scrollBehavior = MiuixScrollBehavior()
     var tab by remember { mutableStateOf("图书") }
     var revision by remember { mutableIntStateOf(0) }
     var loading by remember { mutableStateOf(true) }
@@ -110,7 +151,7 @@ internal fun LibraryAdminScreen(container: AppContainer, onClose: () -> Unit) {
         scope.launch {
             try {
                 when (val result = action()) {
-                    is ApiResult.Ok -> { container.apiClient.remoteImages.clear(); done(); revision++;
+                    is ApiResult.Ok -> { container.apiClient.remoteImages.clear(); done(); revision++
                         scope.launch { snackbar.showSnackbar("已保存") } }
                     is ApiResult.Err -> error = result.message
                 }
@@ -136,45 +177,62 @@ internal fun LibraryAdminScreen(container: AppContainer, onClose: () -> Unit) {
         when (val result = container.apiClient.get(path)) {
             is ApiResult.Err -> error = result.message
             is ApiResult.Ok -> {
-                if (tab == "图书") books = result.data.optJSONArray("books").objects()
-                else if (tab == "阅读任务") {
-                    rules = result.data.optJSONArray("rules").objects(); users = result.data.optJSONArray("users").objects(); groups = result.data.optJSONArray("groups").objects()
-                } else {
-                    scoring = result.data.optBoolean("enabled", true); perPoint = result.data.optInt("minutesPerPoint", 15).toString(); cap = result.data.optInt("dailyCap", 3).toString()
+                when (tab) {
+                    "图书" -> books = result.data.optJSONArray("books").objects()
+                    "阅读任务" -> {
+                        rules = result.data.optJSONArray("rules").objects(); users =
+                            result.data.optJSONArray("users").objects(); groups =
+                            result.data.optJSONArray("groups").objects()
+                    }
+                    else -> {
+                        scoring = result.data.optBoolean("enabled", true); perPoint =
+                            result.data.optInt("minutesPerPoint", 15).toString(); cap =
+                            result.data.optInt("dailyCap", 3).toString()
+                    }
                 }
             }
         }
         loading = false
     }
-    fun back() { if (bookEditor) bookEditor = false else if (taskEditor) taskEditor = false else onClose() }
-    BackHandler(enabled = !busy) { back() }
-    Scaffold(topBar = { SmallTopAppBar(title = if (bookEditor) { if (bookId == null) "上传电子书" else "编辑图书" }
+    fun back() {
+        if (deleteConfirm) deleteConfirm = false
+        else if (bookEditor) bookEditor = false
+        else if (taskEditor) taskEditor = false
+        else onClose()
+    }
+    BackHandler { if (!busy) back() }
+    Scaffold(topBar = { TopAppBar(scrollBehavior = scrollBehavior, title = if (bookEditor) { if (bookId == null) "上传电子书" else "编辑图书" }
         else if (taskEditor) { if (taskId == null) "新增阅读任务" else "编辑阅读任务" } else "图书馆管理",
         navigationIcon = { IconButton(enabled = !busy, onClick = ::back) { Icon(MiuixIcons.Back, "返回") } },
-        actions = { if (!bookEditor && !taskEditor) TextButton("刷新", enabled = !busy && !loading, onClick = { error = null; revision++ }) }) },
+        actions = { if (!bookEditor && !taskEditor) IconButton(enabled = !busy && !loading, onClick = { error = null; revision++ }) {
+            Icon(MiuixIcons.Refresh, "刷新管理数据")
+        } }) },
         snackbarHost = { SnackbarHost(snackbar, Modifier.imePadding()) }) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding(), contentPadding = PaddingValues(AppSpace.page),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding().overScrollVertical().nestedScroll(scrollBehavior.nestedScrollConnection),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             if (!bookEditor && !taskEditor) item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    listOf("图书", "阅读任务", "积分").forEach { option -> TextButton(option, enabled = !busy, onClick = { tab = option; error = null },
-                        colors = if (tab == option) ButtonDefaults.textButtonColorsPrimary() else ButtonDefaults.textButtonColors()) }
-                }
+                val tabs = listOf("图书", "阅读任务", "积分")
+                TabRowWithContour(tabs = tabs, selectedTabIndex = tabs.indexOf(tab), minWidth = 80.dp,
+                    onTabSelected = { if (!busy) { tab = tabs[it]; error = null } })
             }
             if (error != null) item { NoticeBanner(error!!, error = true) }
             if (bookEditor) {
-                item { AdminField("书名", title, { title = it }, !busy) }
-                item { AdminField("作者", author, { author = it }, !busy) }
+                item { SettingGroup { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    AdminField("书名", title, { title = it }, !busy)
+                    AdminField("作者", author, { author = it }, !busy)
+                } } }
                 item {
-                    TextButton(if (file == null) { if (bookId == null) "选择电子书" else "替换电子书（可选）" } else file!!.name,
-                        enabled = !busy, onClick = { pickBook.launch(arrayOf("application/pdf", "application/epub+zip", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain", "application/octet-stream")) })
-                    Text("PDF、EPUB、DOCX、TXT · 最大 20 MiB", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                    SettingGroup { BasicComponent(title = if (bookId == null) "电子书文件" else "替换电子书",
+                        summary = file?.name ?: "PDF、EPUB、DOCX、TXT · 最大 20 MiB", enabled = !busy,
+                        onClick = { pickBook.launch(arrayOf("application/pdf", "application/epub+zip", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain", "application/octet-stream")) }) }
                 }
                 item {
-                    TextButton(cover?.name ?: "选择封面（可选）", enabled = !busy, onClick = { pickCover.launch(arrayOf("image/png", "image/jpeg", "image/webp")) })
-                    Text("PNG、JPEG、WebP · 最大 3 MiB", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                    if (bookId != null) TextButton(if (removeCover) "保留原封面" else "移除原封面", enabled = !busy,
-                        onClick = { removeCover = !removeCover; cover = null })
+                    SettingGroup {
+                        BasicComponent(title = "封面（可选）", summary = cover?.name ?: "PNG、JPEG、WebP · 最大 3 MiB",
+                            enabled = !busy, onClick = { pickCover.launch(arrayOf("image/png", "image/jpeg", "image/webp")) })
+                        if (bookId != null) SwitchPreference(title = "移除原封面", summary = "未选择新封面时生效", checked = removeCover,
+                            enabled = !busy, onCheckedChange = { removeCover = it; cover = null })
+                    }
                 }
                 item { PrimaryAction("保存图书", busy = busy, enabled = title.isNotBlank() && (bookId != null || file != null), onClick = {
                     mutate(action = {
@@ -184,24 +242,24 @@ internal fun LibraryAdminScreen(container: AppContainer, onClose: () -> Unit) {
                     }, done = { bookEditor = false })
                 }) }
                 if (bookId != null) item {
-                    if (deleteConfirm) {
-                        Text("移出后所有书架将隐藏此书，历史阅读记录保留。", style = MiuixTheme.textStyles.footnote1)
-                        Row {
-                            TextButton("取消", enabled = !busy, onClick = { deleteConfirm = false })
-                            TextButton("确认移出书架", enabled = !busy, onClick = { mutate({ container.apiClient.delete("/api/admin/library/$bookId") }, { bookEditor = false }) })
-                        }
-                    } else TextButton("移出书架", enabled = !busy, onClick = { deleteConfirm = true })
+                    TextButton("移出书架", modifier = Modifier.fillMaxWidth(), enabled = !busy,
+                        colors = ButtonDefaults.textButtonColors(textColor = MiuixTheme.colorScheme.error), onClick = { deleteConfirm = true })
                 }
             } else if (taskEditor) {
-                item { AdminField("任务名称", taskName, { taskName = it }, !busy) }
-                item { AdminField("所需阅读分钟数", minutes, { minutes = it.filter(Char::isDigit).take(4) }, !busy, number = true) }
-                item { AdminField("每日派发时间（HH:mm）", time, { time = it.take(5); timeChanged = true }, !busy) }
-                item { AdminField("完成时限（分钟）", timeout, { timeout = it.filter(Char::isDigit).take(4) }, !busy, number = true) }
+                item { SettingGroup { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    AdminField("任务名称", taskName, { taskName = it }, !busy)
+                    AdminField("所需阅读分钟数", minutes, { minutes = it.filter(Char::isDigit).take(4) }, !busy, number = true)
+                } } }
+                item { SettingGroup { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    AdminField("每日派发时间（HH:mm）", time, { time = it.take(5); timeChanged = true }, !busy)
+                    AdminField("完成时限（分钟）", timeout, { timeout = it.filter(Char::isDigit).take(4) }, !busy, number = true)
+                } } }
                 if (taskId == null) item {
-                    Text("发给", style = MiuixTheme.textStyles.footnote1)
-                    Row { listOf("全部", "个人", "任务组").forEach { option -> TextButton(option, enabled = !busy, onClick = {
-                        target = option; targetId = ""; targetName = ""; choosingTarget = option != "全部"
-                    }, colors = if (target == option) ButtonDefaults.textButtonColorsPrimary() else ButtonDefaults.textButtonColors()) } }
+                    SettingGroup {
+                        val targets = listOf("全部", "个人", "任务组")
+                        OverlayDropdownPreference(title = "派发对象", items = targets, selectedIndex = targets.indexOf(target), enabled = !busy,
+                            onSelectedIndexChange = { target = targets[it]; targetId = ""; targetName = ""; choosingTarget = target != "全部" })
+                    }
                     if (target != "全部") {
                         TextButton(targetName.ifEmpty { "选择$target" }, enabled = !busy, onClick = { choosingTarget = !choosingTarget })
                         if (choosingTarget) Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())) {
@@ -240,11 +298,11 @@ internal fun LibraryAdminScreen(container: AppContainer, onClose: () -> Unit) {
                                 val coverUrl = book.optString("coverUrl").takeIf { it.isNotBlank() && it != "null" }
                                 val image = rememberRemoteImageState(container.apiClient.remoteImages, coverUrl?.let { container.apiClient.imageUrl(it) }, 256)
                                 Box(Modifier.width(50.dp).height(70.dp).clip(RoundedCornerShape(6.dp)).background(MiuixTheme.colorScheme.primary.copy(alpha = .07f)), contentAlignment = Alignment.Center) {
-                                    image.bitmap?.let { Image(it, "${book.optString("title")}封面", Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+                                    image.bitmap?.let { Image(it, "${book.optString("title")}封面", Modifier.fillMaxSize(), contentScale = ContentScale.Fit) }
                                         ?: Text(book.optString("format"), style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.primary)
                                 }
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text(book.optString("title"), style = MiuixTheme.textStyles.body1)
+                                    Text(book.optString("title"), style = MiuixTheme.textStyles.body1, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                     Text("${book.optString("author")} · ${book.optString("format")} · ${if (book.optBoolean("enabled")) "已上架" else "未上架"}",
                                         style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                                 }
@@ -281,15 +339,33 @@ internal fun LibraryAdminScreen(container: AppContainer, onClose: () -> Unit) {
                     } }
                 }
                 else -> {
-                    item { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("阅读积分", modifier = Modifier.weight(1f)); TextButton(if (scoring) "已启用" else "已停用", enabled = !busy, onClick = { scoring = !scoring })
+                    item { SettingGroup {
+                        SwitchPreference(title = "阅读积分", summary = "按有效阅读时长结算，每日最多 3 分", checked = scoring,
+                            enabled = !busy, onCheckedChange = { scoring = it })
                     } }
-                    item { AdminField("每得 1 分所需分钟数", perPoint, { perPoint = it.filter(Char::isDigit).take(4) }, !busy, number = true) }
-                    item { AdminField("每日积分上限（1–3）", cap, { cap = it.filter(Char::isDigit).take(1) }, !busy, number = true) }
+                    item { SettingGroup { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        AdminField("每得 1 分所需分钟数", perPoint, { perPoint = it.filter(Char::isDigit).take(4) }, !busy, number = true)
+                        AdminField("每日积分上限（1–3）", cap, { cap = it.filter(Char::isDigit).take(1) }, !busy, number = true)
+                    } } }
+                    item { Text("保存后生效，Web 与 App 共用每日额度。", style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary) }
                     item { PrimaryAction("保存积分设置", busy = busy, enabled = (perPoint.toIntOrNull() ?: 0) in 1..1440 && (cap.toIntOrNull() ?: 0) in 1..3,
                         onClick = { mutate({ container.apiClient.put("/api/admin/library/settings", JSONObject()
                             .put("enabled", scoring).put("minutesPerPoint", perPoint.toInt()).put("dailyCap", cap.toInt())) }) }) }
                 }
+            }
+        }
+    }
+    OverlayDialog(show = deleteConfirm && bookEditor, title = "移出书架？",
+        summary = "所有书架将隐藏这本书，历史阅读记录会保留。", onDismissRequest = { if (!busy) deleteConfirm = false }) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (error != null) Text(error!!, color = MiuixTheme.colorScheme.error)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                TextButton("取消", modifier = Modifier.weight(1f), enabled = !busy, onClick = { deleteConfirm = false })
+                TextButton(if (busy) "处理中…" else "移出书架", modifier = Modifier.weight(1f), enabled = !busy,
+                    colors = ButtonDefaults.textButtonColors(textColor = MiuixTheme.colorScheme.error), onClick = {
+                        mutate({ container.apiClient.delete("/api/admin/library/$bookId") }, { deleteConfirm = false; bookEditor = false })
+                    })
             }
         }
     }

@@ -23,6 +23,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Visible, opt-in short cadence. GPS is requested only when due, with no wake lock. */
 class LocationIntervalService : Service() {
@@ -67,7 +68,7 @@ class LocationIntervalService : Service() {
             while (isActive && shouldRun(this@LocationIntervalService) && container.hasSession() &&
                 container.locationCollector.hasForegroundPermission()) {
                 container.locationReporting.collectIfDue(foreground = true)
-                delay(30_000)
+                delay(30_000.milliseconds)
             }
             stopSelf()
         }

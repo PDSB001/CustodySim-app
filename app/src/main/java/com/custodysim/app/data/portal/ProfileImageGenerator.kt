@@ -98,7 +98,10 @@ object ProfileImageGenerator {
     /** 1240×max(1754, 520+行数×110+250)，与 Web 端 archiveSvg 一一对应。 */
     fun saveArchivePng(context: Context, record: ProfileRecord, summary: ProfileSummary?): Uri? {
         val rows = record.fields.map { field ->
-            field.name to displayValue(record.data.opt(field.name))
+            field.name to if (field.type == "IMAGE") {
+                val count = decodeProfileImages(record.data.opt(field.name)).size
+                if (count == 0) "未上传图片" else "已上传 $count 张图片"
+            } else displayValue(record.data.opt(field.name))
         }
         val rowHeight = 110
         val contentStart = 520

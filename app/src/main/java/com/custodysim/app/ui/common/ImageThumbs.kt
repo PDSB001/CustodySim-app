@@ -1,42 +1,41 @@
 package com.custodysim.app.ui.common
 
 import android.util.LruCache
-import com.custodysim.app.data.media.RemoteImageLoader
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.ui.res.stringResource
-import com.custodysim.app.R
-import com.custodysim.app.data.media.decodeDataUrlBitmap
-import com.custodysim.app.ui.theme.AppShape
-import com.custodysim.app.ui.theme.AppSpace
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Clear
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.key
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
-import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.custodysim.app.R
+import com.custodysim.app.data.media.RemoteImageLoader
+import com.custodysim.app.data.media.decodeDataUrlBitmap
+import com.custodysim.app.ui.theme.AppShape
+import com.custodysim.app.ui.theme.AppSpace
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Clear
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 data class RemoteImageState(val bitmap: ImageBitmap? = null, val loading: Boolean = true)
 
@@ -57,15 +56,11 @@ fun rememberRemoteImageState(loader: RemoteImageLoader, url: String?, maxSize: I
 fun rememberRemoteImage(loader: RemoteImageLoader, url: String?, maxSize: Int = 512): ImageBitmap? =
     rememberRemoteImageState(loader, url, maxSize).bitmap
 
-@Composable
-fun rememberFullRemoteImage(loader: RemoteImageLoader, url: String?): ImageBitmap? =
-    rememberRemoteImage(loader, url, 2048)
-
 /** 把 data URL 解码成 ImageBitmap（异步、可空）。 */
 @Composable
 fun rememberDataUrlImage(dataUrl: String?): ImageBitmap? {
     return key(dataUrl) {
-        val image by produceState<ImageBitmap?>(dataUrl?.let { thumbnailCache.get(it) }) {
+        val image by produceState(dataUrl?.let { thumbnailCache.get(it) }) {
             value = withContext(Dispatchers.Default) { dataUrl?.let { decodeDataUrl(it) } }
         }
         image
@@ -99,7 +94,7 @@ fun ImageThumbs(images: List<String>, modifier: Modifier = Modifier, onRemove: (
                 Box(Modifier.size(112.dp).clip(RoundedCornerShape(AppShape.thumbnail))) {
                     Image(bitmap = bitmap,
                         contentDescription = stringResource(R.string.attachment, index + 1),
-                        modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
                     onRemove?.let { remove ->
                         IconButton(onClick = { remove(index) },
                             modifier = Modifier.align(Alignment.TopEnd).padding(AppSpace.tiny),

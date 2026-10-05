@@ -42,6 +42,8 @@ class AppContainer(context: Context, val endpoint: com.custodysim.app.config.Ser
     ) }
 
     val authRepository by lazy { AuthRepository(apiClient, tokenStore) }
+    internal val readerRepository by lazy { com.custodysim.app.ui.library.LibraryReaderRepository(
+        apiClient, endpoint.baseUrl, java.io.File(appContext.cacheDir, "library-reader-v3")) }
 
     val locationRepository by lazy { LocationRepository(apiClient) }
 

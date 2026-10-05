@@ -13,5 +13,32 @@ buildscript {
 
 plugins {
     alias(libs.plugins.android.application) apply false
+    id("com.android.library") version "9.4.1" apply false
+    alias(libs.plugins.android.test) apply false
+    alias(libs.plugins.androidx.baselineprofile) apply false
     alias(libs.plugins.kotlin.compose) apply false
+}
+
+// Publish this archive alongside the APK built from the same working tree.
+// Only Android build inputs are included; credentials and generated output are excluded.
+tasks.register<Zip>("androidCorrespondingSource") {
+    group = "distribution"
+    description = "Package the complete Android application source for AGPL distribution"
+    archiveFileName.set("CustodySim-Android-corresponding-source.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("distributions"))
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
+    from(rootDir) {
+        into("CustodySim-app")
+        // A source archive must not sweep up local Gradle homes or downloaded
+        // inspection checkouts. Select build inputs rather than all local files.
+        include("*.gradle.kts", "gradle.properties", "gradlew", "gradlew.bat", "gradle/**")
+        include("LICENSE", "LICENSES/**", "README-LICENSE.md", "README.md", "AGENTS.md", ".gitignore", ".gitattributes", "scripts/**", "docs/**")
+        include("app/src/**", "app/*.gradle.kts", "app/*.pro", "app/lint*.xml")
+        include("readerbenchmark/src/**", "readerbenchmark/*.gradle.kts")
+        include("episteme-core/src/**", "episteme-core/*.gradle.kts", "episteme-core/LICENSE", "episteme-core/README.md", "episteme-core/UPSTREAM.json")
+        exclude("**/build/**", "**/.gradle/**", "**/.kotlin/**", "**/.idea/**")
+        exclude("local.properties", "**/*.jks", "**/*.keystore", "**/*.pem", "**/*.p12", "**/*.iml", "**/.env*", "**/captures/**")
+    }
+
 }

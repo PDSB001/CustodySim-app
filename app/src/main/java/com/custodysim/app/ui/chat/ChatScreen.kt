@@ -55,6 +55,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
@@ -83,6 +86,7 @@ import top.yukonga.miuix.kmp.icon.extended.Photos
 import top.yukonga.miuix.kmp.icon.extended.Undo
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import kotlin.time.Duration.Companion.milliseconds
 
 /** 实时通道不可用时的兜底轮询间隔：比原来的 15 秒宽松，避免后台反复唤醒网络。 */
 private const val CHAT_POLL_FALLBACK_MILLIS = 40_000L
@@ -143,7 +147,7 @@ private fun ChatBubble(
                 .size(34.dp).clip(CircleShape)
                 .background(MiuixTheme.colorScheme.primary.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center) {
-                com.custodysim.app.ui.common.UserAvatar(item.senderName ?: "?", item.senderAvatar, size = 34.dp)
+                UserAvatar(item.senderName ?: "?", item.senderAvatar, size = 34.dp)
             }
         }
         Column(Modifier.widthIn(max = maxWidth),
@@ -411,7 +415,7 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
             realtime.join(id)
             val fallback = launch {
                 while (true) {
-                    delay(CHAT_POLL_FALLBACK_MILLIS)
+                    delay(CHAT_POLL_FALLBACK_MILLIS.milliseconds)
                     if (realtime.status.value !is RealtimeStatus.Connected) loadMessages(id)
                 }
             }
@@ -490,7 +494,7 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
                                 Box(Modifier.size(44.dp).clip(CircleShape)
                                     .background(MiuixTheme.colorScheme.primary.copy(alpha = 0.11f)),
                                     contentAlignment = Alignment.Center) {
-                                    if (conversation.type == "DIRECT") com.custodysim.app.ui.common.UserAvatar(
+                                    if (conversation.type == "DIRECT") UserAvatar(
                                         conversation.title, conversation.memberAvatars.entries.firstOrNull { it.key != session.id }?.value)
                                     else Icon(MiuixIcons.Messages, contentDescription = null,
                                         modifier = Modifier.size(22.dp), tint = MiuixTheme.colorScheme.primary)
@@ -619,6 +623,7 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
                 horizontalArrangement = Arrangement.spacedBy(AppSpace.small)) {
                 FramedTextField(value = message, onValueChange = { message = it },
                     label = stringResource(if (pendingImage == null) R.string.chat_message_hint else R.string.chat_image_caption_hint), minLines = 1, maxLines = 4,
+                    enabled = !sending,
                     modifier = Modifier.weight(1f))
                 // 选图即压缩成 data URL（≤1MB，与服务端/Web 端同一约束）。
                 IconButton(onClick = {
@@ -629,20 +634,22 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
                     keyboardController?.hide()
                     scope.launch {
                         // Let the pressed icon and IME settle before Android starts the system picker transition.
-                        delay(if (isImeVisible()) 180 else 90)
+                        delay((if (isImeVisible()) 180 else 90).milliseconds)
                         if (selectedId == target) pickImage()
                     }
-                }) {
+                }, enabled = !sending) {
                     Icon(MiuixIcons.Photos, contentDescription = stringResource(R.string.chat_image),
-                        tint = MiuixTheme.colorScheme.primary)
+                        tint = if (sending) MiuixTheme.colorScheme.onSurfaceVariantSummary
+                            else MiuixTheme.colorScheme.primary)
                 }
                 // 发送按钮的"变形"：空输入是小一圈的弱色圆，有内容时平滑长到 48dp 并填主色，
                 // 发送瞬间先压到 0.88 再弹回 —— 让"发出去了"有手感（reduceMotion 时全部瞬时）。
                 val canSend = message.isNotBlank() || pendingImage != null
+                val sendDescription = stringResource(R.string.chat_send)
                 // "灵动"来自 spring 的轻微过冲：线性 tween 只会匀速到位，没有生气。
                 // reduceMotion 时统一切到 snap()，不做任何动画。
                 val sendSize by animateDpAsState(
-                    targetValue = if (canSend) 48.dp else 40.dp,
+                    targetValue = if (canSend || sending) 48.dp else 40.dp,
                     animationSpec = if (reduceMotion) snap() else spring(
                         dampingRatio = Spring.DampingRatioMediumBouncy,
                         stiffness = Spring.StiffnessMediumLow,
@@ -688,15 +695,17 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
                     }
                 }
                 // 外层只监听指针、不消费事件：按钮自身的点击照常生效，同时我们能拿到"按下"状态。
-                Box(Modifier.pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            awaitFirstDown(requireUnconsumed = false)
-                            sendPressed = true
-                            waitForUpOrCancellation()
-                            sendPressed = false
+                Box(Modifier.pointerInput(canSend, sending) {
+                    try {
+                        if (canSend && !sending) awaitPointerEventScope {
+                            while (true) {
+                                awaitFirstDown(requireUnconsumed = false)
+                                sendPressed = true
+                                waitForUpOrCancellation()
+                                sendPressed = false
+                            }
                         }
-                    }
+                    } finally { sendPressed = false }
                 }) {
                 IconButton(onClick = {
                     val id = selectedId ?: return@IconButton
@@ -764,26 +773,44 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
                         } finally {
                             sending = false
                             scope.launch {
-                                delay(250) // Let the confirmation overlay finish fading out.
+                                delay(250.milliseconds) // Let the confirmation overlay finish fading out.
                                 uploadProgress.remove(local.presentationKey)
                             }
                         }
                     }
-                }, enabled = canSend,
+                }, enabled = canSend && !sending,
                     modifier = Modifier.graphicsLayer {
                         // 按下压、发送弹、尺寸形变都在这一个图层里，避免多次重排。
                         val scale = sendPop.value * pressScale
                         scaleX = scale; scaleY = scale
+                    }.semantics {
+                        contentDescription = sendDescription
+                        if (sending) stateDescription = "正在发送"
                     },
                     minWidth = sendSize, minHeight = sendSize,
                     backgroundColor = sendBackground) {
-                    Icon(MiuixIcons.Send, contentDescription = stringResource(R.string.chat_send),
-                        modifier = Modifier.graphicsLayer {
-                            scaleX = iconScale; scaleY = iconScale
-                            // 图标"长出来"时带一点旋转，比纯缩放更有生气。
-                            rotationZ = (1f - iconScale) * -18f
-                        },
-                        tint = sendTint)
+                    AnimatedContent(
+                        targetState = sending, contentAlignment = Alignment.Center,
+                        transitionSpec = {
+                            fadeIn(tween(if (reduceMotion) 0 else 120)) togetherWith
+                                fadeOut(tween(if (reduceMotion) 0 else 90)) using null
+                        }, label = "chat-send-content",
+                    ) { busy ->
+                        Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) {
+                            if (busy) CircularProgressIndicator(
+                                size = 22.dp, strokeWidth = 2.5.dp,
+                                colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                    foregroundColor = sendTint,
+                                    backgroundColor = sendTint.copy(alpha = 0.20f),
+                                ),
+                            ) else Icon(MiuixIcons.Send, contentDescription = null,
+                                modifier = Modifier.graphicsLayer {
+                                    scaleX = iconScale; scaleY = iconScale
+                                    // 图标"长出来"时带一点旋转，比纯缩放更有生气。
+                                    rotationZ = (1f - iconScale) * -18f
+                                }, tint = sendTint)
+                        }
+                    }
                 }
                 }
             }
@@ -801,22 +828,29 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
             var zoom by remember(previewImage) { mutableFloatStateOf(1f) }
             var pan by remember(previewImage) { mutableStateOf(Offset.Zero) }
             var viewport by remember { mutableStateOf(IntSize.Zero) }
+            LaunchedEffect(viewport, bitmap) {
+                pan = clampChatImagePan(pan, zoom, bitmap, viewport)
+            }
             val transform = rememberTransformableState { centroid, zoomChange, panChange, _ ->
                 val nextZoom = (zoom * zoomChange).coerceIn(1f, 4f)
                 val center = Offset(viewport.width / 2f, viewport.height / 2f)
                 val focalPoint = if (centroid.x.isFinite() && centroid.y.isFinite()) centroid else center
                 pan = if (nextZoom == 1f) Offset.Zero else
-                    pan + panChange + (focalPoint - center - pan) * (1f - nextZoom / zoom)
+                    clampChatImagePan(
+                        pan + panChange + (focalPoint - center - pan) * (1f - nextZoom / zoom),
+                        nextZoom, bitmap, viewport,
+                    )
                 zoom = nextZoom
             }
             Box(Modifier.fillMaxSize().background(Color.Black)) {
                 if (bitmap != null) Image(bitmap, stringResource(R.string.chat_image),
                     modifier = Modifier.fillMaxSize().padding(vertical = 56.dp)
                         .onSizeChanged { viewport = it }
+                        .clipToBounds()
                         .graphicsLayer {
                             scaleX = zoom; scaleY = zoom
                             translationX = pan.x; translationY = pan.y
-                        }.transformable(transform),
+                        }.transformable(transform, canPan = { zoom > 1.001f }, lockRotationOnZoomPan = true),
                     contentScale = ContentScale.Fit)
                 else if (remote?.loading == false) Text(stringResource(R.string.image_unavailable),
                     color = Color.White, modifier = Modifier.align(Alignment.Center))
@@ -848,11 +882,11 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
             }
             PrimaryAction(text = stringResource(R.string.chat_recall), onClick = {
                 val id = selectedId
-                val target = pendingRecall
                 recallVisible = false
-                if (id == null || target == null) return@PrimaryAction
+                if (id == null || pendingRecall == null) return@PrimaryAction
                 scope.launch {
-                    val result = messageMutex.withLock { container.chatRepository.recallMessage(target.id) }
+                    val result = messageMutex.withLock { container.chatRepository.recallMessage(
+                        pendingRecall.id) }
                     when (result) {
                             is ApiResult.Ok -> {
                                 if (selectedId == id) loadMessages(id)
@@ -869,6 +903,15 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
         }
     }
     NewChatSheet(container, showNew, { showNew = false }) { snackbar("私聊请求已处理"); loadConversations() }
+}
+
+/** Keep a fitted image inside its viewport while allowing zoomed content to be explored. */
+private fun clampChatImagePan(offset: Offset, scale: Float, bitmap: ImageBitmap?, viewport: IntSize): Offset {
+    if (bitmap == null || viewport.width <= 0 || viewport.height <= 0) return Offset.Zero
+    val fit = minOf(viewport.width.toFloat() / bitmap.width, viewport.height.toFloat() / bitmap.height)
+    val horizontal = maxOf(0f, (bitmap.width * fit * scale - viewport.width) / 2f)
+    val vertical = maxOf(0f, (bitmap.height * fit * scale - viewport.height) / 2f)
+    return Offset(offset.x.coerceIn(-horizontal, horizontal), offset.y.coerceIn(-vertical, vertical))
 }
 
 @Composable
@@ -907,7 +950,10 @@ private fun NewChatSheet(container: AppContainer, show: Boolean, onDismiss: () -
                 )
             }
             if (!loading && candidates.isEmpty() && error == null) PageState(stringResource(R.string.chat_no_candidates))
-            if (candidates.getOrNull(selectedIndex)?.sameRoom == false) FramedTextField(value = reason, onValueChange = { reason = it }, label = stringResource(R.string.chat_reason), modifier = Modifier.fillMaxWidth())
+            if (candidates.getOrNull(selectedIndex)?.sameRoom == false) FramedTextField(
+                value = reason, onValueChange = { reason = it }, label = stringResource(R.string.chat_reason),
+                enabled = !loading && !submitting, maxLines = 4, modifier = Modifier.fillMaxWidth(),
+            )
             error?.let { Text(it, color = MiuixTheme.colorScheme.error) }
             PrimaryAction(stringResource(R.string.chat_create), busy = loading || submitting, enabled = candidates.isNotEmpty() && !loading && !submitting, onClick = {
                 val target = candidates.getOrNull(selectedIndex) ?: return@PrimaryAction

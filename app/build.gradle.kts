@@ -1,9 +1,42 @@
 import java.util.Properties
 import java.net.URI
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.androidx.baselineprofile)
+}
+
+abstract class GenerateNetworkSecurityConfig : DefaultTask() {
+    @get:Input abstract val cleartextHosts: ListProperty<String>
+    @get:OutputDirectory abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun generate() {
+        val xml = buildString {
+            appendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
+            appendLine("<network-security-config>")
+            appendLine("    <base-config cleartextTrafficPermitted=\"false\" />")
+            if (cleartextHosts.get().isNotEmpty()) {
+                appendLine("    <domain-config cleartextTrafficPermitted=\"true\">")
+                cleartextHosts.get().forEach { host ->
+                    val escaped = host.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                    appendLine("        <domain includeSubdomains=\"false\">$escaped</domain>")
+                }
+                appendLine("    </domain-config>")
+            }
+            appendLine("</network-security-config>")
+        }
+        val target = outputDirectory.file("xml/network_security_config.xml").get().asFile
+        target.parentFile.mkdirs()
+        target.writeText(xml)
+    }
 }
 
 // 本机私有配置（android/local.properties，不入库）：服务端地址从这里取，真实域名不写进仓库。
@@ -40,6 +73,24 @@ fun isLocalEndpoint(url: String): Boolean {
 val needsLocalNetwork = localProperties.getProperty("custodysim.localNetwork")?.toBooleanStrictOrNull()
     ?: (isLocalEndpoint(devBaseUrl) || isLocalEndpoint(devRealtimeUrl))
 
+val configuredCleartextHosts = listOf(devBaseUrl, devRealtimeUrl).mapNotNull { url ->
+    val endpoint = URI(url)
+    endpoint.host?.removeSurrounding("[", "]")?.lowercase()
+        ?.takeIf { endpoint.scheme?.lowercase() in listOf("http", "ws") }
+}.distinct()
+
+androidComponents.onVariants { variant ->
+    if (variant.buildType in listOf("development", "benchmark", "readerPerf", "nonMinifiedReaderPerf", "benchmarkReaderPerf")) {
+        val generator = tasks.register<GenerateNetworkSecurityConfig>(
+            "generate${variant.name.replaceFirstChar { it.uppercase() }}NetworkSecurityConfig",
+        ) {
+            cleartextHosts.set(configuredCleartextHosts)
+            outputDirectory.set(layout.buildDirectory.dir("generated/res/network-security/${variant.name}"))
+        }
+        variant.sources.res?.addGeneratedSourceDirectory(generator, GenerateNetworkSecurityConfig::outputDirectory)
+    }
+}
+
 android {
     namespace = "com.custodysim.app"
     // Compose BOM 2026.09 的库要求 compileSdk >= 37（AGP 9.4 支持到 API 37）
@@ -57,11 +108,16 @@ android {
         buildConfigField("String", "BASE_URL_ENCODED", "\"\"")
         buildConfigField("String", "REALTIME_URL_ENCODED", "\"\"")
         buildConfigField("boolean", "NEEDS_LOCAL_NETWORK", "false")
+        buildConfigField("boolean", "EPISTEME_READER", "false")
     }
 
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    lint {
+        warningsAsErrors = true
     }
 
     buildTypes {
@@ -89,6 +145,7 @@ android {
             signingConfig = signingConfigs.getByName("debug") // Local installation; not a publishing key.
             matchingFallbacks += listOf("debug")
             applicationIdSuffix = ".dev"
+            buildConfigField("boolean", "EPISTEME_READER", "true")
             buildConfigField("boolean", "NEEDS_LOCAL_NETWORK", needsLocalNetwork.toString())
             buildConfigField("String", "BASE_URL_ENCODED", "\"${encodedUrl(devBaseUrl)}\"")
             buildConfigField("String", "REALTIME_URL_ENCODED", "\"${encodedUrl(devRealtimeUrl)}\"")
@@ -102,6 +159,9 @@ android {
             buildConfigField("String", "BASE_URL_ENCODED", "\"${encodedUrl(devBaseUrl)}\"")
             buildConfigField("String", "REALTIME_URL_ENCODED", "\"${encodedUrl(devRealtimeUrl)}\"")
         }
+        create("readerPerf") {
+            initWith(getByName("benchmark"))
+        }
     }
 
     // 内置 Kotlin 下 jvmTarget 默认等于这里的 targetCompatibility，无需再显式设置。
@@ -112,11 +172,13 @@ android {
 }
 
 dependencies {
+    implementation(project(":episteme-core"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.profileinstaller)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -140,6 +202,29 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.runner)
+    baselineProfile(project(":readerbenchmark"))
+}
+
+baselineProfile {
+    automaticGenerationDuringBuild = false
+    mergeIntoMain = false
+    saveInSrc = true
+    filter {
+        include("com.custodysim.app.**")
+        exclude("com.custodysim.app.benchmark.**")
+    }
+}
+
+// Profile generation keeps the benchmark-only fixture harness, never the production manifest.
+androidComponents.finalizeDsl {
+    listOf("readerPerf", "nonMinifiedReaderPerf", "benchmarkReaderPerf").forEach { name ->
+        it.sourceSets.findByName(name)?.apply {
+            kotlin.directories.add("src/benchmark/java")
+            assets.directories.add("src/benchmark/assets")
+            res.directories.add("src/benchmark/res")
+            manifest.srcFile("src/benchmark/AndroidManifest.xml")
+        }
+    }
 }
 
 // A public build requires no private settings. Check only requested private variants.
@@ -149,7 +234,7 @@ tasks.matching { it.name == "preProductionBuild" }.configureEach {
     val configured = productionConfigured
     doFirst { check(configured) { "production requires private HTTPS and WSS server settings" } }
 }
-tasks.matching { it.name == "preDevelopmentBuild" || it.name == "preBenchmarkBuild" }.configureEach {
+tasks.matching { it.name in listOf("preDevelopmentBuild", "preBenchmarkBuild", "preReaderPerfBuild", "preNonMinifiedReaderPerfBuild", "preBenchmarkReaderPerfBuild") }.configureEach {
     val configured = developmentConfigured
     doFirst { check(configured) { "development requires private baseUrl and realtimeUrl settings" } }
 }

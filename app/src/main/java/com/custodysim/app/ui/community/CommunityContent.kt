@@ -41,6 +41,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Lock
 import top.yukonga.miuix.kmp.icon.extended.Messages
+import top.yukonga.miuix.kmp.icon.extended.Community
 import top.yukonga.miuix.kmp.icon.extended.Photos
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
@@ -79,7 +80,7 @@ internal fun CommunityFeedContent(
                     )
                 }
             } else {
-                val visiblePosts = if (posts.isNotEmpty()) posts else previousPosts
+                val visiblePosts = posts.ifEmpty { previousPosts }
                 LazyColumn(Modifier.fillMaxSize(), state = state,
                     contentPadding = PaddingValues(horizontal = AppSpace.page, vertical = AppSpace.small),
                     verticalArrangement = Arrangement.spacedBy(AppSpace.medium)) {
@@ -356,7 +357,7 @@ private fun CommunityEmptyState(title: String, description: String, loading: Boo
       Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.size(72.dp).background(MiuixTheme.colorScheme.primary.copy(alpha = 0.07f), RoundedCornerShape(24.dp)), contentAlignment = Alignment.Center) {
             if (shown.loading) CircularProgressIndicator(size = 28.dp)
-            else Icon(MiuixIcons.Messages, null, Modifier.size(34.dp), tint = MiuixTheme.colorScheme.primary)
+            else Icon(MiuixIcons.Community, null, Modifier.size(34.dp), tint = MiuixTheme.colorScheme.primary)
         }
         Spacer(Modifier.height(AppSpace.section))
         Text(shown.title, style = MiuixTheme.textStyles.body1.copy(fontSize = 20.sp, fontWeight = FontWeight.Medium), textAlign = TextAlign.Center)

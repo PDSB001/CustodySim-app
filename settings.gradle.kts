@@ -25,3 +25,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "CustodySim"
 include(":app")
+include(":readerbenchmark")
+include(":episteme-core")

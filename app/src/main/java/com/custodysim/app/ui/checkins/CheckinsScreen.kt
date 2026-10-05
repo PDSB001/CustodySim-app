@@ -65,6 +65,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.time.Duration.Companion.milliseconds
 
 enum class Mode { CHECKIN, MAKEUP }
 
@@ -131,7 +132,7 @@ fun CheckinsScreen(container: AppContainer, scrollBehavior: ScrollBehavior) {
                 now = System.currentTimeMillis()
                 val boundary = slots.flatMap { listOf(it.startsAt(), it.endsAt().let { end -> if (end == Long.MAX_VALUE) end else end + 1 }) }
                     .filter { it > now && it != Long.MAX_VALUE }.minOrNull()
-                delay(if (boundary == null) 60_000L else (boundary - now).coerceIn(1L, 60_000L))
+                delay((if (boundary == null) 60_000L else (boundary - now).coerceIn(1L, 60_000L)).milliseconds)
             }
         }
     }
@@ -330,7 +331,7 @@ private fun CheckinSheet(
     val end = remember(slot.deadline) { runCatching { OffsetDateTime.parse(slot.deadline).toInstant().toEpochMilli() }.getOrNull() }
     val available = start != null && end != null && now in start..end
     LaunchedEffect(show) {
-        while (show) { now = System.currentTimeMillis(); delay(1_000) }
+        while (show) { now = System.currentTimeMillis(); delay(1_000.milliseconds) }
     }
     val picker = rememberImagePicker(1) { urls -> photo = urls.firstOrNull() }
 

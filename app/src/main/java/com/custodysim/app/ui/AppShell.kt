@@ -22,6 +22,10 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -51,6 +55,7 @@ import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Contacts
+import top.yukonga.miuix.kmp.icon.extended.Community
 import top.yukonga.miuix.kmp.icon.extended.Home
 import top.yukonga.miuix.kmp.icon.extended.Messages
 import top.yukonga.miuix.kmp.icon.extended.Promotions
@@ -106,6 +111,7 @@ fun AppShell(container: AppContainer, session: SessionUser, onLogout: () -> Unit
             LocalGlassBackdrop provides backdrop) {
         Box(Modifier.fillMaxSize()) {
         Scaffold(
+            modifier = Modifier.semantics { if (showLibrary || showCommunity) hideFromAccessibility() },
             snackbarHost = { SnackbarHost(snackbarState, Modifier.imePadding()) },
             topBar = {
                 GlassSurface(cornerRadius = 0.dp, enableRefraction = false) {
@@ -137,7 +143,7 @@ fun AppShell(container: AppContainer, session: SessionUser, onLogout: () -> Unit
                         }
                         if (tab == MainTab.HOME) {
                             IconButton(onClick = { showCommunity = true }) {
-                                Icon(MiuixIcons.Messages, contentDescription = "匿名社区")
+                                Icon(MiuixIcons.Community, contentDescription = "匿名社区")
                             }
                             IconButton(onClick = { showNotices = true }) {
                                 Icon(MiuixIcons.Promotions, contentDescription = stringResource(R.string.portal_notices), tint = MiuixTheme.colorScheme.primary)
@@ -227,7 +233,7 @@ fun AppShell(container: AppContainer, session: SessionUser, onLogout: () -> Unit
                         when (destination) {
                             MainTab.HOME -> HomeScreen(container, session, scrollBehavior,
                                 active = tab == MainTab.HOME && !showCommunity && !showNotices && !showLibrary,
-                                onNavigate = { tab = it }, onNotices = { showNotices = true }, onLibrary = { showLibrary = true })
+                                onNavigate = { tab = it }, onNotices = { showNotices = true })
                             MainTab.CHECKINS -> CheckinsScreen(container, scrollBehavior)
                             MainTab.TASKS -> TasksScreen(container, scrollBehavior, allowSubmission = session.isSupervised, refreshSignal = libraryRefreshRequest)
                             MainTab.APPLICATIONS -> ApplicationsScreen(container, scrollBehavior)
@@ -254,15 +260,36 @@ fun AppShell(container: AppContainer, session: SessionUser, onLogout: () -> Unit
                 slideOutHorizontally(tween(if (effects.reduceMotion) 0 else 300, easing = FastOutSlowInEasing)) { it / 12 },
         ) {
             Box(Modifier.fillMaxSize().background(MiuixTheme.colorScheme.surface)) {
+                Box(Modifier.matchParentSize().blockBackgroundTouches())
                 CommunityScreen(container, onClose = { showCommunity = false })
             }
         }
-        if (showLibrary) {
-            com.custodysim.app.ui.library.LibraryScreen(container, admin = session.role == "ADMIN", onClose = { showLibrary = false; libraryRefreshRequest++ })
+        AnimatedVisibility(
+            visible = showLibrary,
+            modifier = Modifier.fillMaxSize(),
+            // The library can restore an open WebView. Animate translation only: fading its
+            // ancestor creates an offscreen layer that can blank the native reading surface.
+            enter = slideInHorizontally(tween(if (effects.reduceMotion) 0 else 260, easing = FastOutSlowInEasing)) { it },
+            exit = slideOutHorizontally(tween(if (effects.reduceMotion) 0 else 220, easing = FastOutSlowInEasing)) { it },
+        ) {
+            Box(Modifier.fillMaxSize().background(MiuixTheme.colorScheme.surface)) {
+                Box(Modifier.matchParentSize().blockBackgroundTouches())
+                com.custodysim.app.ui.library.LibraryScreen(container, admin = session.role == "ADMIN",
+                    onClose = { showLibrary = false; libraryRefreshRequest++ })
+            }
         }
         }
     }
 
+}
+
+// Use only on a BACKGROUND SIBLING, never on the foreground's ancestor. Consuming
+// ancestor events even in the Final pass cancels AndroidView touch streams and can
+// cancel Compose scroll gestures. The sibling is hit only outside foreground handlers.
+private fun Modifier.blockBackgroundTouches() = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) awaitPointerEvent(PointerEventPass.Final).changes.forEach { it.consume() }
+    }
 }
 
 @Composable
@@ -281,15 +308,18 @@ private fun MineScreen(container: AppContainer, session: SessionUser, onLogout: 
     val haptics = LocalHapticFeedback.current
     var locationEnabled by remember { mutableStateOf(LocationPreferences.isEnabled(context)) }
     var locationInterval by remember { mutableLongStateOf(LocationPreferences.intervalMinutes(context)) }
-    var serverPolicy by remember { mutableStateOf<LocationPolicy?>(null) }
-    LaunchedEffect(Unit) { serverPolicy = container.locationRepository.fetchPolicy() }
+    var serverPolicy by remember(container, session.id, session.isSupervised) { mutableStateOf<LocationPolicy?>(null) }
+    LaunchedEffect(container, session.id, session.isSupervised) {
+        if (session.isSupervised) serverPolicy = container.locationRepository.fetchPolicy()
+    }
     val intervals = remember(serverPolicy) {
         val policy = serverPolicy ?: LocationPolicy.FALLBACK
         val min = ((policy.minIntervalSeconds + 59) / 60).coerceAtLeast(5)
         val max = (policy.maxIntervalSeconds / 60).coerceAtMost(360)
         LocationPreferences.intervals.filter { it >= min && it <= max }.ifEmpty { listOf(min.toLong().coerceAtMost(360L)) }
     }
-    LaunchedEffect(intervals) {
+    LaunchedEffect(intervals, session.isSupervised) {
+        if (!session.isSupervised) return@LaunchedEffect
         if (locationInterval !in intervals) {
             locationInterval = intervals.first()
             LocationPreferences.setIntervalMinutes(context, locationInterval)
@@ -297,6 +327,7 @@ private fun MineScreen(container: AppContainer, session: SessionUser, onLogout: 
         }
     }
     var showLogout by remember { mutableStateOf(false) }
+    var showLicenses by remember { mutableStateOf(false) }
     BackHandler(showLogout) { showLogout = false }
     LazyColumn(
         state = rememberAppListState(),
@@ -338,7 +369,7 @@ private fun MineScreen(container: AppContainer, session: SessionUser, onLogout: 
             }
         }
         item { EffectsPreferences() }
-        item {
+        if (session.isSupervised) item {
             Column {
                 SectionTitle(stringResource(R.string.location_settings))
                 SettingGroup {
@@ -378,9 +409,10 @@ private fun MineScreen(container: AppContainer, session: SessionUser, onLogout: 
             Column {
                 SectionTitle(stringResource(R.string.about))
                 SettingGroup {
-                    BasicComponent(title = "服务器设置", onClick = onServerSettings)
-                    BasicComponent(title = "匿名社区", summary = "分享日常与自愿公开的档案内容", onClick = onCommunity)
+                    ArrowPreference(title = "服务器设置", onClick = onServerSettings)
+                    ArrowPreference(title = "匿名社区", summary = "分享日常与自愿公开的档案内容", onClick = onCommunity)
                     InfoRow(stringResource(R.string.version), BuildConfig.VERSION_NAME)
+                    ArrowPreference(title = "开源许可与源码", summary = "Episteme 阅读核心 · AGPL-3.0", onClick = { showLicenses = true })
                 }
             }
         }
@@ -391,6 +423,7 @@ private fun MineScreen(container: AppContainer, session: SessionUser, onLogout: 
                 colors = ButtonDefaults.textButtonColors(textColor = MiuixTheme.colorScheme.error))
         }
     }
+    com.custodysim.app.ui.common.OpenSourceSheet(showLicenses) { showLicenses = false }
     OverlayDialog(
         show = showLogout, title = stringResource(R.string.logout),
         summary = stringResource(R.string.logout_summary),

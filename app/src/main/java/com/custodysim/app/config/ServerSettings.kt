@@ -1,11 +1,14 @@
 package com.custodysim.app.config
 
 import android.content.Context
+import android.annotation.SuppressLint
 import com.custodysim.app.BuildConfig
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 class ServerSettings(context: Context) {
     private val prefs = context.getSharedPreferences("server_selection", Context.MODE_PRIVATE)
+    // KTX edit discards commit's Boolean result; configuration persistence must report failure.
+    @SuppressLint("UseKtx")
     fun read(): ServerEndpoint {
         val origin = prefs.getString("origin", null)
         val namespace = prefs.getString("namespace", null)
@@ -27,6 +30,7 @@ class ServerSettings(context: Context) {
         }
     }
 
+    @SuppressLint("UseKtx") // Preserve the checked synchronous commit contract.
     fun save(endpoint: ServerEndpoint) {
         check(prefs.edit().putString("origin", endpoint.baseUrl)
             .putString("namespace", endpoint.namespace).commit()) { "无法保存服务器配置，请重试" }

@@ -5,12 +5,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import com.custodysim.app.R
 import com.custodysim.app.ui.theme.AppSpace
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
+import java.time.ZoneId
 import java.util.Locale
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.preference.ArrowPreference
@@ -29,6 +32,9 @@ fun DatePreference(
     onValueChange: (String) -> Unit,
 ) {
     var show by remember { mutableStateOf(false) }
+    val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val dateZone = remember { ZoneId.of("Asia/Shanghai") }
     val initial = remember(show, value) {
         runCatching {
             when {
@@ -36,7 +42,7 @@ fun DatePreference(
                 value.length == 10 -> LocalDate.parse(value).atStartOfDay()
                 else -> LocalDateTime.parse(value)
             }
-        }.getOrElse { LocalDateTime.now() }
+        }.getOrElse { LocalDateTime.now(dateZone) }
     }
     var year by remember(show) { mutableIntStateOf(initial.year) }
     var month by remember(show) { mutableIntStateOf(initial.monthValue) }
@@ -47,13 +53,17 @@ fun DatePreference(
     LaunchedEffect(lastDay) { day = day.coerceAtMost(lastDay) }
     val row: @Composable () -> Unit = {
         ArrowPreference(title = label, summary = value.replace('T', ' ').ifBlank { "请选择" },
-            enabled = enabled, onClick = { show = true })
+            enabled = enabled, onClick = {
+                focus.clearFocus()
+                keyboard?.hide()
+                show = true
+            })
     }
     if (standalone) SettingGroup { row() } else row()
     OverlayDialog(show = show, title = label, onDismissRequest = { show = false }) {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(AppSpace.medium)) {
             Row(Modifier.fillMaxWidth()) {
-                NumberPicker(year, { year = it }, Modifier.weight(1.3f), range = minOf(1900, initial.year)..maxOf(LocalDate.now().year + 100, initial.year), label = { "${it}年" }, visibleItemCount = 3, textStyle = MiuixTheme.textStyles.body1)
+                NumberPicker(year, { year = it }, Modifier.weight(1.3f), range = minOf(1900, initial.year)..maxOf(LocalDate.now(dateZone).year + 100, initial.year), label = { "${it}年" }, visibleItemCount = 3, textStyle = MiuixTheme.textStyles.body1)
                 NumberPicker(month, { month = it }, Modifier.weight(1f), range = 1..12, label = { "${it}月" }, visibleItemCount = 3, textStyle = MiuixTheme.textStyles.body1)
                 if (!monthOnly) NumberPicker(day.coerceAtMost(lastDay), { day = it }, Modifier.weight(1f), range = 1..lastDay, label = { "${it}日" }, visibleItemCount = 3, textStyle = MiuixTheme.textStyles.body1)
             }

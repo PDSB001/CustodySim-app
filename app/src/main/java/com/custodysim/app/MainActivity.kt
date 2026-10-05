@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
                     // Keep the host outside session/container replacement, including login and LAN gates.
                     Scaffold(containerColor = Color.Transparent, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { _ ->
                         key(container) {
-                            LocalNetworkAccess(required = container.endpoint.namespace.isEmpty() && BuildConfig.NEEDS_LOCAL_NETWORK,
+                            LocalNetworkAccess(required = container.endpoint.namespace.isEmpty(),
                                 onServerSettings = { serverSettings = true }) {
                                 AppRoot(container, onServerSettings = { serverSettings = true })
                             }

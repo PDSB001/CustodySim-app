@@ -31,3 +31,9 @@ app/release/
 app/production/
 app/development/
 app/benchmark/
+
+/artifacts/
+.env*
+*.pem
+*.p12
+*.zip

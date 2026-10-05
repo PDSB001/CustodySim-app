@@ -47,6 +47,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.custodysim.app.data.media.decodeDataUrlBitmap
@@ -266,7 +267,7 @@ private fun CommunityEditorPhotos(
                     if (index < 0 && visible.isIdle && !visible.currentState) rendered.remove(url)
                 }
                 AnimatedVisibility(
-                    visibleState = visible, modifier = Modifier.offset(x = x).size(cell),
+                    visibleState = visible, modifier = Modifier.offset { IntOffset(x.roundToPx(), 0) }.size(cell),
                     enter = fadeIn(tween(if (reduceMotion) 0 else 180)) + scaleIn(tween(if (reduceMotion) 0 else 220), initialScale = 0.94f),
                     exit = fadeOut(tween(if (reduceMotion) 0 else 140)) + scaleOut(tween(if (reduceMotion) 0 else 180), targetScale = 0.94f),
                 ) {
@@ -287,7 +288,7 @@ private fun CommunityEditorPhotos(
             val addX by animateDpAsState((cell + AppSpace.small) * images.size.coerceAtMost(2),
                 tween(if (reduceMotion) 0 else 240, easing = FastOutSlowInEasing), label = "editor-add-position")
             AnimatedVisibility(
-                visible = images.size < 3, modifier = Modifier.offset(x = addX).size(cell),
+                visible = images.size < 3, modifier = Modifier.offset { IntOffset(addX.roundToPx(), 0) }.size(cell),
                 enter = fadeIn(tween(if (reduceMotion) 0 else 180)), exit = fadeOut(tween(if (reduceMotion) 0 else 100)),
             ) {
                 val interaction = remember { MutableInteractionSource() }

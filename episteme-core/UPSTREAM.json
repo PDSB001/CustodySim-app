@@ -1,0 +1,161 @@
+{
+  "repository": "https://github.com/Aryan-Raj3112/episteme",
+  "revision": "92b9d0abbd0f28a950006cb655c1bd6ab3ef097a",
+  "license": "AGPL-3.0-only",
+  "files": [
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/ContentStylingPolicies.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/ContentStylingPolicies.kt",
+      "upstreamSha256": "09ea495282fa75e35f37ad9875187371eb77fee7e730ed719ec25b9817cbc149",
+      "sha256": "09ea495282fa75e35f37ad9875187371eb77fee7e730ed719ec25b9817cbc149",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/CssGeneratedContent.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/CssGeneratedContent.kt",
+      "upstreamSha256": "e59087ae009139f214cf1ae8e9a21a57c5a6eaf89bfbc03846f46b83d0d88649",
+      "sha256": "e59087ae009139f214cf1ae8e9a21a57c5a6eaf89bfbc03846f46b83d0d88649",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/CssParser.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/CssParser.kt",
+      "upstreamSha256": "35580ee7c2de2e5578deb7cb4993b07738d356e8aaad20554bc78130b09f6757",
+      "sha256": "192c5e6b7e84135fd0b7fd4c9b5580e599d83ae8eb1a84ece67f7a057b6bef20",
+      "modified": true
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/FontFamilyMapper.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/FontFamilyMapper.kt",
+      "upstreamSha256": "98afe8568e6dcf35202b7534337bc983551ee69baa8103d942cced640d058863",
+      "sha256": "98afe8568e6dcf35202b7534337bc983551ee69baa8103d942cced640d058863",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/readerJvmMain/kotlin/com/aryan/reader/paginatedreader/HtmlParser.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/HtmlParser.kt",
+      "upstreamSha256": "29b13a9f7aa7ae128a539654173b12ac9cc528a251fa420aefec31a648384123",
+      "sha256": "29b13a9f7aa7ae128a539654173b12ac9cc528a251fa420aefec31a648384123",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/PaginatedReaderData.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/PaginatedReaderData.kt",
+      "upstreamSha256": "fc4c19478109e4157e2cf273c12c943090990a6770b6b38b0eccebe6b56dd3a0",
+      "sha256": "fc4c19478109e4157e2cf273c12c943090990a6770b6b38b0eccebe6b56dd3a0",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/PaginatedTableLayoutPolicy.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/PaginatedTableLayoutPolicy.kt",
+      "upstreamSha256": "11dee72f4e6ae5500f1ec156704ab468c3a81c90bdbc7ab97778113b3987ad1e",
+      "sha256": "11dee72f4e6ae5500f1ec156704ab468c3a81c90bdbc7ab97778113b3987ad1e",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/PaginationEnginePolicies.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/PaginationEnginePolicies.kt",
+      "upstreamSha256": "6fbf21d5fea309177a24abc0d756e52bd54871b952dbede1142e4d2be70db85a",
+      "sha256": "6fbf21d5fea309177a24abc0d756e52bd54871b952dbede1142e4d2be70db85a",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/PaginationMeasurementPolicy.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/PaginationMeasurementPolicy.kt",
+      "upstreamSha256": "73dcfe0014d68dfc64981bdd10cfa324f5444633583cfccf695ab7e8983350bf",
+      "sha256": "73dcfe0014d68dfc64981bdd10cfa324f5444633583cfccf695ab7e8983350bf",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/PaginationStackFragmentationPolicy.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/PaginationStackFragmentationPolicy.kt",
+      "upstreamSha256": "80fee35fb028465d1fadc56ea31a33b136e0662cb50b665d1e2dc21ff3809ee6",
+      "sha256": "80fee35fb028465d1fadc56ea31a33b136e0662cb50b665d1e2dc21ff3809ee6",
+      "modified": false
+    },
+    {
+      "upstream": "app/src/main/java/com/aryan/reader/paginatedreader/Paginator.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/Paginator.kt",
+      "upstreamSha256": "bc85134befe01ab591a06c5aeb539942f1bdb9a3b9614b3b91a48e9e491df57a",
+      "sha256": "57c92561ebf0793208414ee3cfdd210d89ae06e644eb0326e135e78944c362c5",
+      "modified": true
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/ReaderBlockModifiers.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/ReaderBlockModifiers.kt",
+      "upstreamSha256": "bfe0a429573ee33d0af99d4691bb1d169511120d2a34c9352e1179079e5c2f16",
+      "sha256": "bfe0a429573ee33d0af99d4691bb1d169511120d2a34c9352e1179079e5c2f16",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/ReaderLinkStyle.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/ReaderLinkStyle.kt",
+      "upstreamSha256": "548f93ef688d7e470941d038564ca239ab320d84055314caf512f16b725b57bd",
+      "sha256": "eef1b1d76ade8594641126fa27caac13236ee2472ffbfdc4e9b53e76c9dde6a5",
+      "modified": true
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/ReaderMissingFigurePolicy.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/ReaderMissingFigurePolicy.kt",
+      "upstreamSha256": "e5a365cbbd32c3617ca113cccf09a2a46eefe6a473ef904d5cab6ab4d926a0e6",
+      "sha256": "e5a365cbbd32c3617ca113cccf09a2a46eefe6a473ef904d5cab6ab4d926a0e6",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/RubyRendering.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/RubyRendering.kt",
+      "upstreamSha256": "d99b756b4d940110195ed1a392829f7cca62511cbacf771476ed3210938eedf8",
+      "sha256": "d99b756b4d940110195ed1a392829f7cca62511cbacf771476ed3210938eedf8",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/SemanticModel.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/SemanticModel.kt",
+      "upstreamSha256": "1333ac7bb9a41b2e42ab4ba6a9b3af879a05f0d06ad559134ec69b7f3a006f15",
+      "sha256": "1333ac7bb9a41b2e42ab4ba6a9b3af879a05f0d06ad559134ec69b7f3a006f15",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/serialization/ComposeTypeSerializers.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/serialization/ComposeTypeSerializers.kt",
+      "upstreamSha256": "e938919d4816be4dff0321494aa4da961c0813a4f66c7402616010e5a4460e95",
+      "sha256": "e938919d4816be4dff0321494aa4da961c0813a4f66c7402616010e5a4460e95",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/SharedContentStyler.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/SharedContentStyler.kt",
+      "upstreamSha256": "b669230ca35d239271232a41a39b15830713b8ee81646160ba0eb4b31a108efd",
+      "sha256": "b669230ca35d239271232a41a39b15830713b8ee81646160ba0eb4b31a108efd",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/SharedPaginator.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/SharedPaginator.kt",
+      "upstreamSha256": "7bdfcd909d00f7fb81d2059dc1cf0005ad02e33a7e2af7737cade831d4c4e94e",
+      "sha256": "7bdfcd909d00f7fb81d2059dc1cf0005ad02e33a7e2af7737cade831d4c4e94e",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/paginatedreader/StyleUtils.kt",
+      "local": "src/main/java/com/aryan/reader/paginatedreader/StyleUtils.kt",
+      "upstreamSha256": "8b9cd82a4181eaa4f48e6fe73b8e57fc14feaed5658ae10a69f3382786e91980",
+      "sha256": "8b9cd82a4181eaa4f48e6fe73b8e57fc14feaed5658ae10a69f3382786e91980",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/shared/reader/ReaderPaintOnlyText.kt",
+      "local": "src/main/java/com/aryan/reader/shared/reader/ReaderPaintOnlyText.kt",
+      "upstreamSha256": "d3005eb9ad0965d6e98e2b78d8acab8e676c279eeba2a8779d4a660791f2009d",
+      "sha256": "d3005eb9ad0965d6e98e2b78d8acab8e676c279eeba2a8779d4a660791f2009d",
+      "modified": false
+    },
+    {
+      "upstream": "shared/src/commonMain/kotlin/com/aryan/reader/shared/reader/SharedReaderTextAlignment.kt",
+      "local": "src/main/java/com/aryan/reader/shared/reader/SharedReaderTextAlignment.kt",
+      "upstreamSha256": "4abcf9c811663071f59b7cacd79fdfad10c00628dfc7b8b9dd27fade51e09119",
+      "sha256": "4abcf9c811663071f59b7cacd79fdfad10c00628dfc7b8b9dd27fade51e09119",
+      "modified": false
+    }
+  ]
+}
