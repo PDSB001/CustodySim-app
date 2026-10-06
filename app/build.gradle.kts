@@ -116,6 +116,10 @@ android {
 
     lint {
         warningsAsErrors = true
+        // Dependency freshness belongs in reviewed upgrades, not a lint gate
+        // whose result changes as Maven publishes releases. Timber is a reader
+        // dependency; the app intentionally uses Android Log without a Timber tree.
+        disable += setOf("GradleDependency", "NewerVersionAvailable", "LogNotTimber")
     }
 
     buildTypes {

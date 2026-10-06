@@ -25,6 +25,8 @@ Web／服务端仓库。发布前提交 App 工作区，再通过主项目的 `s
 
 ## 许可与发布
 
+持续集成检查与构建产物见 [docs/ci.md](docs/ci.md)。正式 APK 由维护者本机签名构建，CI 不保存签名材料。
+
 组合 Android 应用按 AGPL-3.0-only 分发。原有 MIT 和第三方许可声明完整保留。
 详见 [README-LICENSE.md](README-LICENSE.md)。每个 APK 应同时提供其准确对应源码，
 不得仅以本仓库最新分支或 Episteme 上游链接替代发布版本源码。
