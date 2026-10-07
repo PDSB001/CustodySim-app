@@ -51,6 +51,7 @@ fun serverUrl(propertyKey: String, environmentKey: String): String =
 val devBaseUrl = serverUrl("custodysim.baseUrl", "CUSTODYSIM_BASE_URL")
 val devRealtimeUrl = serverUrl("custodysim.realtimeUrl", "CUSTODYSIM_REALTIME_URL")
 val productionBaseUrl = serverUrl("custodysim.productionBaseUrl", "CUSTODYSIM_PRODUCTION_BASE_URL")
+    .ifEmpty { "https://www.jxydev.top" }
 val productionRealtimeUrl = serverUrl("custodysim.productionRealtimeUrl", "CUSTODYSIM_PRODUCTION_REALTIME_URL")
     .ifEmpty { productionBaseUrl.replaceFirst("https://", "wss://") }
 // Obfuscation only: runtime endpoints remain recoverable.
@@ -100,8 +101,8 @@ android {
         minSdk = 26
         //noinspection EditedTargetSdkVersion
         targetSdk = 37
-        versionCode = 2
-        versionName = "1.5.2-test"
+        versionCode = 4
+        versionName = "1.6.1-test"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "BASE_URL_ENCODED", "\"\"")
@@ -148,6 +149,7 @@ android {
         create("debugR8") {
             initWith(getByName("debug"))
             matchingFallbacks += "debug"
+            isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -155,6 +157,9 @@ android {
         create("production") {
             initWith(getByName("release"))
             matchingFallbacks += "release"
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             buildConfigField("String", "BASE_URL_ENCODED", "\"${encodedUrl(productionBaseUrl)}\"")
             buildConfigField("String", "REALTIME_URL_ENCODED", "\"${encodedUrl(productionRealtimeUrl)}\"")
         }

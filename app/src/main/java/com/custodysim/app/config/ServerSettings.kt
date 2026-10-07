@@ -17,16 +17,21 @@ class ServerSettings(context: Context) {
             ServerEndpoint(normalized, normalized.replaceFirst("https://", "wss://"), namespace)
         } else {
             // Bind legacy credentials to the original compiled endpoint once, even across APK updates.
-            val initial = prefs.getString("initial_origin", null)
-            if (initial == null) check(prefs.edit().putString("initial_origin", AppConfig.baseUrl)
-                .putString("initial_realtime", AppConfig.realtimeUrl).commit()) { "无法保存初始服务器配置" }
+            val storedInitial = prefs.getString("initial_origin", null)
+            val storedRealtime = prefs.getString("initial_realtime", null)
+            val initial = storedInitial?.takeIf { it.isNotBlank() } ?: AppConfig.baseUrl
+            val initialRealtime = storedRealtime?.takeIf { it.isNotBlank() } ?: AppConfig.realtimeUrl
+            if (storedInitial.isNullOrBlank() || storedRealtime.isNullOrBlank()) {
+                check(prefs.edit().putString("initial_origin", initial)
+                    .putString("initial_realtime", initialRealtime).commit()) { "无法保存初始服务器配置" }
+            }
             // LAN development builds follow DHCP changes in the compiled defaults.
             // Explicit server selections and public origins retain their storage boundary.
             if (BuildConfig.NEEDS_LOCAL_NETWORK && isPrivateHttp(initial) && isPrivateHttp(AppConfig.baseUrl)) {
                 return ServerEndpoint(AppConfig.baseUrl, AppConfig.realtimeUrl, "")
             }
-            ServerEndpoint(initial ?: AppConfig.baseUrl,
-                prefs.getString("initial_realtime", AppConfig.realtimeUrl)!!, "")
+            ServerEndpoint(initial,
+                initialRealtime, "")
         }
     }
 
