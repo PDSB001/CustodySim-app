@@ -26,14 +26,18 @@ fun resolveImageUrl(baseUrl: String, source: String): String? {
 }
 
 /** Owned by one runtime ApiClient, never shared across servers/sessions. */
-class RemoteImageLoader(private val api: ApiClient) {
-    private data class Entry(val bytes: ByteArray, val bitmaps: Map<Int, Bitmap>)
+class RemoteImageLoader internal constructor(private val getBytes: suspend (String) -> ApiResult<ByteArray>) {
+    constructor(api: ApiClient) : this(api::getBytes)
 
-    // Same 8 MiB budget and width * height * 4 accounting as ImageThumbs;
-    // retained compressed bytes also count, allowing preview decoding without another GET.
-    private val cache = object : LruCache<String, Entry>(8 * 1024 * 1024) {
-        override fun sizeOf(key: String, value: Entry): Int =
-            value.bytes.size + value.bitmaps.values.sumOf { it.width * it.height * 4 }
+    private data class BitmapKey(val url: String, val maxSize: Int)
+
+    // Independent budgets: large compressed covers must not evict the shelf thumbnails.
+    // Both caches belong to this session and are cleared together on logout/server switching.
+    private val sources = object : LruCache<String, ByteArray>(8 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: ByteArray): Int = value.size
+    }
+    private val bitmaps = object : LruCache<BitmapKey, Bitmap>(8 * 1024 * 1024) {
+        override fun sizeOf(key: BitmapKey, value: Bitmap): Int = value.allocationByteCount
     }
     private val missing = LruCache<String, Boolean>(256)
     private val mutex = Mutex()
@@ -41,9 +45,13 @@ class RemoteImageLoader(private val api: ApiClient) {
 
     @Synchronized fun clear() {
         generation++
-        cache.evictAll()
+        sources.evictAll()
+        bitmaps.evictAll()
         missing.evictAll()
     }
+
+    /** No I/O or decoding: compose can show a cached image in its very first frame. */
+    @Synchronized fun peek(url: String, maxSize: Int): Bitmap? = bitmaps.get(BitmapKey(url, maxSize))
 
     /** Null failures are not cached except definitive 404s. Cancellation remains cancellation. */
     suspend fun fetchRemoteImage(url: String, maxSize: Int): Bitmap? = withContext(Dispatchers.IO) {
@@ -52,9 +60,8 @@ class RemoteImageLoader(private val api: ApiClient) {
             mutex.withLock {
                 if (startedGeneration != generation) return@withLock null
                 if (missing.get(url) == true) return@withLock null
-                val cached = cache.get(url)
-                cached?.bitmaps?.get(maxSize)?.let { return@withLock it }
-                val bytes = cached?.bytes ?: when (val result = api.getBytes(url)) {
+                peek(url, maxSize)?.let { return@withLock it }
+                val bytes = sources.get(url) ?: when (val result = getBytes(url)) {
                     is ApiResult.Ok -> result.data
                     is ApiResult.Err -> {
                         synchronized(this@RemoteImageLoader) {
@@ -65,13 +72,13 @@ class RemoteImageLoader(private val api: ApiClient) {
                 }
                 val bitmap = decodeImageBytes(bytes, maxSize) ?: return@withLock null
                 coroutineContext.ensureActive()
-                val entry = Entry(bytes, cached?.bitmaps.orEmpty() + (maxSize to bitmap))
-                val cost = bytes.size + entry.bitmaps.values.sumOf { it.width * it.height * 4 }
-                // A full preview can exceed the entire LRU budget; retain its compressed source
-                // instead of inserting an oversized entry which would evict everything, including itself.
                 synchronized(this@RemoteImageLoader) {
                     if (startedGeneration != generation) null else {
-                        cache.put(url, if (cost <= cache.maxSize()) entry else Entry(bytes, emptyMap()))
+                        // Oversized originals/previews must not flush all smaller cached entries.
+                        if (bytes.size <= sources.maxSize()) sources.put(url, bytes)
+                        if (bitmap.allocationByteCount <= bitmaps.maxSize()) {
+                            bitmaps.put(BitmapKey(url, maxSize), bitmap)
+                        }
                         bitmap
                     }
                 }

@@ -43,9 +43,11 @@ data class RemoteImageState(val bitmap: ImageBitmap? = null, val loading: Boolea
 @Composable
 fun rememberRemoteImageState(loader: RemoteImageLoader, url: String?, maxSize: Int): RemoteImageState =
     key(loader, url, maxSize) {
-        val state by produceState(RemoteImageState()) {
+        val cached = url?.let { loader.peek(it, maxSize)?.asImageBitmap() }
+        val state by produceState(RemoteImageState(cached, loading = url != null && cached == null)) {
+            if (value.bitmap != null || url == null) return@produceState
             val bitmap = withContext(Dispatchers.IO) {
-                url?.let { loader.fetchRemoteImage(it, maxSize)?.asImageBitmap() }
+                loader.fetchRemoteImage(url, maxSize)?.asImageBitmap()
             }
             value = RemoteImageState(bitmap, loading = false)
         }
