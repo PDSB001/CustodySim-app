@@ -6,6 +6,7 @@ import com.custodysim.app.data.net.ApiResult
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.ByteArrayOutputStream
@@ -21,6 +22,29 @@ class RemoteImageLoaderTest {
                 if (paddedBytes > bytes.size) bytes.copyOf(paddedBytes) else bytes
             }
         } finally { bitmap.recycle() }
+    }
+
+    @Test fun independentImagesLoadConcurrently() = runBlocking {
+        val bytes = png()
+        val lock = Any()
+        var started = 0
+        val bothStarted = CompletableDeferred<Unit>()
+        val response = CompletableDeferred<ApiResult<ByteArray>>()
+        val loader = RemoteImageLoader {
+            synchronized(lock) {
+                started++
+                if (started == 2) bothStarted.complete(Unit)
+            }
+            response.await()
+        }
+
+        val first = async { loader.fetchRemoteImage("a", 512) }
+        val second = async { loader.fetchRemoteImage("b", 512) }
+        withTimeout(2_000) { bothStarted.await() }
+        response.complete(ApiResult.Ok(bytes))
+
+        assertNotNull(first.await())
+        assertNotNull(second.await())
     }
 
     @Test fun scrollingBackToLargeCoversReusesThumbnailsAfterOriginalBytesAreEvicted() = runBlocking {

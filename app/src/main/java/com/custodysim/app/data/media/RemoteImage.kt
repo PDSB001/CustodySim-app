@@ -40,7 +40,10 @@ class RemoteImageLoader internal constructor(private val getBytes: suspend (Stri
         override fun sizeOf(key: BitmapKey, value: Bitmap): Int = value.allocationByteCount
     }
     private val missing = LruCache<String, Boolean>(256)
-    private val mutex = Mutex()
+    // Keep image work bounded while allowing independent images to download/decode together.
+    // A striped lock also deduplicates concurrent requests for the same URL without retaining
+    // an unbounded URL -> Mutex map for a long-lived session.
+    private val requestLocks = Array(4) { Mutex() }
     @Volatile private var generation = 0L
 
     @Synchronized fun clear() {
@@ -57,7 +60,8 @@ class RemoteImageLoader internal constructor(private val getBytes: suspend (Stri
     suspend fun fetchRemoteImage(url: String, maxSize: Int): Bitmap? = withContext(Dispatchers.IO) {
         try {
             val startedGeneration = generation
-            mutex.withLock {
+            val requestLock = requestLocks[(url.hashCode() and Int.MAX_VALUE) % requestLocks.size]
+            requestLock.withLock {
                 if (startedGeneration != generation) return@withLock null
                 if (missing.get(url) == true) return@withLock null
                 peek(url, maxSize)?.let { return@withLock it }
