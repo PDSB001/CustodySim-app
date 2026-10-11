@@ -8,8 +8,8 @@
 Gradle setup 自动校验 wrapper，PR 使用只读缓存。Action 固定提交 SHA，
 Dependabot 每周提出更新；同分支新运行会取消旧运行。
 
-Lint 保留 warnings-as-errors。只排除依赖新版本提醒与传递引入 Timber 的日志
-风格提示：依赖版本由维护者审查升级，App 继续使用 Android Log。其余正确性、
+Lint 保留 warnings-as-errors。只排除依赖、Gradle/AGP 新版本提醒与传递引入 Timber 的日志
+风格提示：工具链和依赖版本由维护者审查升级，避免仅因上游发布新版就让相同提交的 CI 变红；App 继续使用 Android Log。其余正确性、
 安全、资源及 API 兼容检查仍作为失败门槛，不使用整体 baseline 隐藏问题。
 
 检查内容：
