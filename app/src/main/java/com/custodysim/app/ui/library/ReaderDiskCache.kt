@@ -66,8 +66,12 @@ internal class ReaderDiskCache(private val directory: File, private val limit: L
                 } finally { temporary.delete() }
                 val entries = directory.listFiles()?.filter { it.extension == "cache" }.orEmpty().sortedBy { it.lastModified() }
                 var total = entries.sumOf { it.length() }
+                // Keep the entry just written even when filesystem timestamps tie or the
+                // clock moves backwards. Its size alone was already checked against limit.
+                val writtenEntry = entry(key)
                 for (file in entries) {
                     if (total <= limit) break
+                    if (file == writtenEntry) continue
                     val size = file.length()
                     if (file.delete()) total -= size
                 }

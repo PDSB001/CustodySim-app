@@ -27,8 +27,11 @@ class ReaderDiskCacheTest {
             directory.listFiles()!!.single().writeBytes(ByteArray(72))
             assertNull(cache.read("first"))
             cache.write("first", ByteArray(40) { 1 })
+            // Force timestamp ordering against the new write, independent of OS precision.
+            assertTrue(directory.listFiles()!!.single().setLastModified(System.currentTimeMillis() + 60_000))
             cache.write("second", ByteArray(40) { 2 })
             assertTrue(directory.listFiles()!!.sumOf { it.length() } <= 100)
+            assertNull(cache.read("first"))
             assertArrayEquals(ByteArray(40) { 2 }, cache.read("second"))
         } finally { directory.deleteRecursively() }
     }
