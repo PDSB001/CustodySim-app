@@ -11,12 +11,41 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.*
 import org.junit.Test
+import org.json.JSONObject
 import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicInteger
 
 class LibraryReaderRepositoryTest {
     private val offline = ApiResult.Err(ApiErrorCode.UNKNOWN, "offline", 0)
+
+    @Test fun sharedDocumentUsesDiskOnlyAfterCurrentAccessValidation() = runBlocking {
+        val directory = Files.createTempDirectory("reader-shared-document-test").toFile()
+        try {
+            val identity = JSONObject().put("readerKey", "account-a").put("revision", "revision-1")
+                .put("format", "TXT").put("renderMetadataVersion", 1)
+            val document = JSONObject("""{"version":1,"pages":1,"toc":[],"chapters":[{"path":"text","title":"正文","html":"<p>正文</p>","text":"正文","start":0,"length":2}]}""")
+                .put("readerKey", "account-a").put("revision", "revision-1").put("renderMetadataVersion", 1)
+            var permitted = true
+            var metadataCalls = 0
+            var downloads = 0
+            fun repository() = LibraryReaderRepository(
+                { path ->
+                    assertTrue(path.endsWith("?metadata=1")); metadataCalls++
+                    if (permitted) ApiResult.Ok(identity) else ApiResult.Err(ApiErrorCode.FORBIDDEN, "revoked", 403)
+                }, { error("No resources expected") }, "https://reader.test", directory,
+                { path -> assertTrue(path.endsWith("/document")); downloads++; ApiResult.Ok(document) },
+            )
+            assertTrue(repository().document("book") is ApiResult.Ok)
+            assertTrue(repository().document("book") is ApiResult.Ok)
+            assertEquals(1, downloads)
+            assertEquals(2, metadataCalls)
+            permitted = false
+            assertEquals(403, (repository().document("book") as ApiResult.Err).httpStatus)
+            assertEquals(1, downloads)
+            assertEquals(3, metadataCalls)
+        } finally { directory.deleteRecursively() }
+    }
 
     private fun repository(directory: File, getResource: suspend (String) -> ApiResult<ByteArray>) =
         LibraryReaderRepository({ error("Resources must not fetch document JSON") }, getResource, "https://reader.test", directory)

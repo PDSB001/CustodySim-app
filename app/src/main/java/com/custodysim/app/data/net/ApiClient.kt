@@ -156,6 +156,36 @@ class ApiClient(
         execute(Request.Builder().url(baseUrl + path).get().build())
     }
 
+    /** CDN public reader snapshots; retain normal auth/refresh and socket cancellation. */
+    suspend fun getReaderDocument(path: String): ApiResult<JSONObject> = readerWithRecovery(path) { target, shared ->
+        suspendCancellableCoroutine { continuation ->
+            val request = Request.Builder().url(baseUrl + target).get().apply {
+                if (shared) header("X-CustodySim-Reader-Delivery", "shared-v1")
+                else header("X-CustodySim-Reader-Recovery-Reason", "app-reader")
+                // Leave Accept-Encoding to OkHttp's transparent gzip negotiation.
+            }.build()
+            val call = client.newCall(request)
+            continuation.invokeOnCancellation { call.cancel() }
+            call.enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    continuation.resume(ApiResult.Err(ApiErrorCode.UNKNOWN, "阅读正文传输失败", 0))
+                }
+                override fun onResponse(call: Call, response: Response) {
+                    val result = response.use {
+                        try {
+                            val parsed = parseReaderResponse(it)
+                            if (parsed is ApiResult.Err && it.code == 429)
+                                parsed.copy(retryAfterSeconds = retryAfterSeconds(it.header("Retry-After"), parsed.message))
+                            else parsed
+                        }
+                        catch (_: Exception) { ApiResult.Err(ApiErrorCode.UNKNOWN, "无法解码阅读正文", it.code) }
+                    }
+                    continuation.resume(result)
+                }
+            })
+        }
+    }
+
     /** 供 data 为数组的列表接口使用。 */
     suspend fun getArray(path: String): ApiResult<JSONArray> = withContext(Dispatchers.IO) {
         executeList(Request.Builder().url(baseUrl + path).get().build())

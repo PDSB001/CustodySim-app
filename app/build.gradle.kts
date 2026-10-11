@@ -206,6 +206,8 @@ dependencies {
 
     // 两个独立测试源码集均使用 JUnit，不能互相替代。
     testImplementation(libs.junit)
+    // JVM tests need real JSON parsing rather than android.jar's stub methods.
+    testImplementation(libs.test.json)
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.runner)
 }

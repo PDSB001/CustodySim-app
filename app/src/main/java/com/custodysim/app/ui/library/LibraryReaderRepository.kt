@@ -18,8 +18,9 @@ internal class LibraryReaderRepository(
     private val getResource: suspend (String) -> ApiResult<ByteArray>,
     private val origin: String,
     directory: File,
+    private val getSharedDocument: suspend (String) -> ApiResult<JSONObject> = getDocument,
 ) {
-    constructor(api: ApiClient, origin: String, directory: File) : this(api::get, api::getBytes, origin, directory)
+    constructor(api: ApiClient, origin: String, directory: File) : this(api::get, api::getBytes, origin, directory, api::getReaderDocument)
 
     private val disk = ReaderDiskCache(directory)
     private val documentDownloads = ReaderDownloads<JSONObject>()
@@ -41,12 +42,13 @@ internal class LibraryReaderRepository(
                     cached.optInt("renderMetadataVersion") >= identity.optInt("renderMetadataVersion")) return@withKey ApiResult.Ok(cached)
                 disk.remove(cacheKey)
             }
-            val result = getDocument("/api/library/$bookId/document")
-            // ApiClient's JSON call is currently blocking; a cancelled screen must not publish
-            // or cache the result after that call eventually returns.
+            val result = getSharedDocument("/api/library/$bookId/document")
+            // A cancelled screen must never publish or cache a late result,
+            // including adapters used with older servers.
             currentCoroutineContext().ensureActive()
             if (result is ApiResult.Ok) {
                 val resultKey = key(result.data) ?: return@withKey invalidIdentity()
+                if (resultKey != cacheKey) return@withKey invalidIdentity()
                 val parsed = runCatching { ReadingDocument.from(result.data) }
                 if (parsed.isFailure) return@withKey ApiResult.Err(ApiErrorCode.UNKNOWN,
                     parsed.exceptionOrNull()?.message ?: "阅读文档格式不完整，请重新加载", 0)
