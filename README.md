@@ -1,45 +1,52 @@
-# CustodySim App
+# CustodySim Android
 
-Kotlin + Compose Android 客户端，独立仓库：https://github.com/PDSB001/CustodySim-app 。
-Web 与服务端：https://github.com/PDSB001/CustodySim ，通过 HTTP API 协作。
+Kotlin + Compose + Miuix 原生 Android 客户端，与独立的 [Web / API](https://github.com/PDSB001/CustodySim) 协作。日常开发、构建和提交均在本仓库进行。
 
-## 构建
+![Android 构建与分发方式](docs/assets/android-builds.svg)
 
-配置本机 Android SDK（local.properties 的 sdk.dir）和 JDK 后，在仓库根运行：
+> 文档核对日期：2026-10-18。当前版本 **1.6.1-test / versionCode 4**，minSdk 26，compileSdk / targetSdk 37。版本以 [app/build.gradle.kts](app/build.gradle.kts) 为准。
+
+## 文档入口
+
+| 事项                         | 文档                                      |
+| ---------------------------- | ----------------------------------------- |
+| 工具链、构建变体、端点、安装 | [开发与发布](docs/android-development.md) |
+| 持续集成、失败报告、源码产物 | [CI](docs/ci.md)                          |
+| 网络鉴权、聊天与服务端契约   | [接口与行为](docs/android-client.md)      |
+| 正文、PDF、插图与本地缓存    | [阅读与缓存](docs/reader-cache.md)        |
+| 后台定位与前台服务提示       | [权限与定位](docs/permissions.md)         |
+| Gradle 增量构建              | [构建缓存](docs/android-build-cache.md)   |
+| 许可与对应源码               | [README-LICENSE.md](README-LICENSE.md)    |
+| 历史迁移、性能与设计         | [文档中心](docs/README.md)                |
+
+## 快速构建
+
+准备 JDK 17、Android SDK 37，在忽略的 local.properties 设置 sdk.dir，使用仓库 wrapper：
 
 ```powershell
 .\gradlew.bat :app:assembleDebug
-.\gradlew.bat :app:testDebugUnitTest --tests 'com.custodysim.app.ui.library.*'
+.\gradlew.bat :app:testDebugUnitTest
+.\gradlew.bat :app:lintDebug
+```
+
+Bash 用 ./gradlew。只有 debug、debugR8、production、release 四个构建类型；production/release/debugR8 开启 R8。未配置发布签名的 production/release 默认未签名。正式 APK 由维护者本机签名，CI 不保存签名材料。
+
+release 不嵌入默认服务器；production 预置远端端点，可通过本机配置覆盖；debug/debugR8 使用私有联调配置。运行时从服务器设置检测并选择 HTTPS 根地址，保存的选择优先，不通过改 APK 静默覆盖用户设置。
+
+## 阅读与缓存
+
+EPUB/DOCX 使用 Episteme，TXT 使用 StaticLayout，PDF 使用 PdfRenderer，不使用 WebView 回退。每次开书先在线校验 metadata，再复用按服务器、readerKey 与 revision 隔离的 128 MiB 阅读磁盘缓存。
+
+首次正文支持 shared-v1 共享 CDN 字节和 gzip；5xx、传输或共享身份异常仅恢复一次 document-origin，权限失败与取消不重试。25 MiB OkHttp HTTP 缓存另行遵循缓存头，不等于阅读磁盘缓存。详见[阅读链路](docs/reader-cache.md)。
+
+## 发布与边界
+
+组合 Android 应用按 **AGPL-3.0-only** 分发，保留原 MIT 和第三方声明。分发 APK 时提供同一版本的准确对应源码：
+
+```powershell
 .\gradlew.bat androidCorrespondingSource
 ```
 
-服务端地址在 App 设置内配置；私有构建配置仅放 local.properties 或环境变量，不入库。
-仅保留 debug、debugR8、production 和 release。EPUB/DOCX 统一使用 Episteme 原生阅读器，TXT/PDF 分别使用
-原生文本和 PDF 路径；旧 WebView 阅读器已移除。debug 保留联调应用 ID `.dev`，
-debugR8 使用相同联调地址并开启 R8。production 预置远端服务器，release 无预置地址；
-两者保留正式应用 ID 并开启 R8，未配置发布签名时产物为未签名 APK。
+源码 ZIP 不含签名、local.properties 或用户数据。编译、lint 和 JVM 单测不证明真实设备的手势、帧率、后台定位或签名升级已验收。
 
-日常开发在主项目目录内独立的 `.app-workspace` Git worktree 中进行，App 源码不提交到
-Web／服务端仓库。发布前提交 App 工作区，再通过主项目的 `scripts/sync-app-release.ps1`
-同步到独立发布目录；默认只构建，显式 `-Push` 才推送远程。
-
-## 阅读正文缓存
-
-阅读器每次打开先通过 `/document?metadata=1` 校验当前权限和版本，再复用按服务器、用户阅读标识与版本隔离的 128 MB 磁盘缓存。首次正文下载携带 `X-CustodySim-Reader-Delivery: shared-v1`，接入服务端的 EdgeOne 公共正文缓存；gzip 根据实际文件头解码，兼容标准 HTTP 自动解压和节点未保留 Content-Encoding 的情况。公共响应中的阅读标识只接受当次鉴权响应头，且须与本次打开的元数据一致，缓存中继续保存完整的个人阅读文档。
-
-网络/解码/共享身份校验失败及 5xx 只尝试一次 `/document-origin`，重新执行正常会话和图书权限检查；401/403/404 与取消操作不回源重试。旧服务端或未启用共享缓存时兼容原响应。生产 API 应包含独立 document-origin 恢复接口，EdgeOne 触发规则不得包含该路径。此功能需要重新构建安装 App；不改变阅读位置、计时与签名配置。
-
-## 许可与发布
-
-持续集成检查与构建产物见 [docs/ci.md](docs/ci.md)。正式 APK 由维护者本机签名构建，CI 不保存签名材料。
-
-组合 Android 应用按 AGPL-3.0-only 分发。原有 MIT 和第三方许可声明完整保留。
-详见 [README-LICENSE.md](README-LICENSE.md)。每个 APK 应同时提供其准确对应源码，
-不得仅以本仓库最新分支或 Episteme 上游链接替代发布版本源码。
-
-## 迁移来源
-
-Android 提交历史从 CustodySim 的 android/ 子树导出，保留作者和提交信息。
-迁移基准：44ac1611ff46e189ddf21715f45b0f9d124481ad 。当前未提交的 App 修复作为新仓库迁移提交纳入。
-迁移审计与稳定性计划：[docs/android-stabilization-and-repo-split.md](docs/android-stabilization-and-repo-split.md)。
-旧说明中的 android/ 前缀表示迁移前路径；本仓库对应根目录。
+迁移历史来自原 Web 仓库 android 子树，见[迁移记录](docs/repository-migration.md)。旧 .app-workspace、development/benchmark/H5 阅读器说明仅在历史归档中保留。

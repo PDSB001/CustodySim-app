@@ -1,30 +1,38 @@
 # Android CI
 
-`.github/workflows/ci.yml` 在 PR、`main` 推送及手动运行时执行检查。
-流水线不读取私有密钥和服务配置，也不发布正式 APK。正式 Release APK 由维护者
-在本机签名构建。
+核对日期：2026-10-18。入口 [.github/workflows/ci.yml](../.github/workflows/ci.yml)，PR、main 推送、手动运行及 workflow_call 触发。正式 APK 由维护者本机签名，CI 不保存发布密钥或私有服务端配置。
 
-环境固定为 Ubuntu 24.04、JDK 17、仓库 Gradle wrapper、Android API 37。
-Gradle setup 自动校验 wrapper，PR 使用只读缓存。Action 固定提交 SHA，
-Dependabot 每周提出更新；同分支新运行会取消旧运行。
+![构建验证与本机正式分发](assets/android-builds.svg)
 
-Lint 保留 warnings-as-errors。只排除依赖、Gradle/AGP 新版本提醒与传递引入 Timber 的日志
-风格提示：工具链和依赖版本由维护者审查升级，避免仅因上游发布新版就让相同提交的 CI 变红；App 继续使用 Android Log。其余正确性、
-安全、资源及 API 兼容检查仍作为失败门槛，不使用整体 baseline 隐藏问题。
+## 环境与检查
 
-检查内容：
+Ubuntu 24.04、Temurin JDK 17、仓库 Gradle wrapper 9.8.0、Android API 37 / build-tools 37.0.0。工具链以 [setup-android](../.github/actions/setup-android/action.yml) 和构建文件为准。
 
-1. `node scripts/verify-episteme.mjs`：校验 vendored 文件与 `UPSTREAM.json`。
-2. `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease androidCorrespondingSource`。
-3. `node scripts/verify-source-archive.mjs`：检查源码包必要文件，拒绝密钥、私有配置及 APK 混入源码。
-4. 确认 Release APK 未签名，打包同次构建 APK、对应源码、提交 SHA 和 SHA-256 清单。
+1. workflow 静态检查、Gradle wrapper 校验；PR 仅读主分支缓存。
+2. `node scripts/verify-episteme.mjs`，校验导入源与 UPSTREAM.json 哈希。
+3. `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease androidCorrespondingSource --no-daemon --console=plain`。
+4. `node scripts/verify-source-archive.mjs`，检查必要构建文件并拒绝私有材料。
+5. 确认未签名 Release，收集对应源码、提交 SHA 和 SHA-256。
 
-`android-reports-*` 报告保留 7 天；`android-build-<commit SHA>` 产物保留 14 天。
-建议在主分支规则中要求 **Android CI gate** 成功。
+当前 gate 超时 40 分钟；同分支新运行取消旧运行。唯一 Job 名称为 **Android CI gate**，建议设置为必需检查。只申请 contents: read，Action 固定 SHA。
 
-本机发布时选择 CI 通过的提交，使用自己的签名材料构建正式 APK，并从相同
-源码重新运行 `androidCorrespondingSource`。分发时 APK 与准确对应源码一起
-提供；签名身份、真机功能、手势和帧率由本机流程验收。
+## 报告和产物
 
-本机执行 `verify-source-archive.mjs` 时需把 `unzip` 加入 PATH；Windows 可使用
-Git for Windows 附带的 `usr/bin/unzip.exe`。CI 的 Ubuntu runner 已包含此工具。
+| 名称                       | 内容                                                                | 保留  |
+| -------------------------- | ------------------------------------------------------------------- | ----- |
+| android-reports-*          | app/build/reports 与 test-results                                   | 7 天  |
+| android-build-{commit SHA} | Debug APK、未签名 Release、准确对应源码 ZIP、COMMIT.txt、SHA256SUMS | 14 天 |
+
+报告在失败时也尽量上传；构建未完成时可能没有完整产物。未签名 Release 不能当正式分发包直接安装。
+
+Lint 保持 warnings-as-errors，只排除构建文件列出的依赖版本提醒与传递 Timber 日志风格提示，其余检查仍阻止通过。
+
+## 失败怎么查
+
+- 哈希失败：用 vendor 脚本更新 Episteme 与 UPSTREAM.json，不手改清单掩盖来源。
+- 单测失败：先看 app/build/test-results/testDebugUnitTest。
+- Lint 失败：看 app/build/reports 中实际 issue 和对应行，不用全局 baseline 掩盖新增错误。
+- R8/打包失败：核对真实报错与受影响变体，保留 mapping；不能因 Debug 成功跳过 Release。
+- 源码归档失败：核对精确版本、必需脚本、许可证及是否意外包含本机文件。
+
+本机归档校验需 unzip 在 PATH；Windows 可用 Git for Windows 的 usr/bin/unzip.exe。真实设备、正式签名连续性和后台成功率不由 CI 证明，按[本机发布流程](android-development.md)验收。

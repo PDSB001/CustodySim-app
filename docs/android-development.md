@@ -1,22 +1,57 @@
 # Android 开发与发布
 
-App 独立仓库：https://github.com/PDSB001/CustodySim-app 。
-日常联调在主项目目录的 `.app-workspace/` 内进行，这是 App 仓库的独立 Git worktree，
-不属于 Web／服务端仓库。主仓库不再维护 `android/`。
+核对日期：2026-10-18。所有命令从 **CustodySim-app 仓库根目录**执行；不需要 Web 仓库中的旧 .app-workspace 或同步脚本。
+
+![构建类型、CI 与本机发布](assets/android-builds.svg)
+
+## 工具链
+
+| 项目                | 当前仓库配置                       |
+| ------------------- | ---------------------------------- |
+| JDK                 | CI 为 Temurin 17；Java 编译目标 17 |
+| Gradle wrapper      | 9.8.0                              |
+| AGP / Kotlin        | 9.4.1 / 2.4.0                      |
+| Compose BOM / Miuix | 2026.09.00 / 0.9.3                 |
+| Android SDK         | min 26 / compile 37 / target 37    |
+| 应用版本            | 1.6.1-test / versionCode 4         |
+
+版本依据为 [版本目录](../gradle/libs.versions.toml)、[wrapper](../gradle/wrapper/gradle-wrapper.properties) 和 [App 构建文件](../app/build.gradle.kts)。不要额外使用另一套系统 Gradle 替代 wrapper。
 
 ## 构建变体
 
-| 变体 | 用途 | 应用 ID | 签名 |
-| --- | --- | --- | --- |
-| debug | 日常联调 | com.custodysim.app.dev | 本机 debug 签名 |
-| debugR8 | 联调、R8 与资源收缩 | com.custodysim.app.dev | 本机 debug 签名 |
-| production | 预置远端服务器、R8 与资源收缩 | com.custodysim.app | 发布流程提供；默认未签名 |
-| release | 无预置地址、R8 与资源收缩 | com.custodysim.app | 发布流程提供；默认未签名 |
+| 变体       | 应用 ID                | R8 / 资源收缩 | 默认服务器 / 签名                |
+| ---------- | ---------------------- | ------------- | -------------------------------- |
+| debug      | com.custodysim.app.dev | 关闭          | 私有联调配置；本机 debug 签名    |
+| debugR8    | com.custodysim.app.dev | 开启          | 同 debug；非 debuggable 优化验证 |
+| production | com.custodysim.app     | 开启          | 预置远端，可私有覆盖；默认未签名 |
+| release    | com.custodysim.app     | 开启          | 不嵌入端点；默认未签名           |
 
-四个变体的阅读路径一致：EPUB/DOCX 使用 Episteme，TXT 使用 StaticLayout 原生引擎，
-PDF 使用 PdfRenderer。旧 H5/WebView 阅读器与切换开关已移除。
+四个变体的 EPUB/DOCX 都使用 Episteme，TXT/PDF 使用原生引擎；没有 development、benchmark、H5 开关或 WebView 回退。端点混淆只降低直接阅读便利性，不能保护密钥，运行时地址仍可恢复。
 
-在 App worktree 根目录执行：
+## 私有构建配置
+
+在忽略的 local.properties 配置 sdk.dir。端点优先 local.properties，缺省再读对应环境变量：
+
+| local.properties                 | 环境变量                           | 变体                       |
+| -------------------------------- | ---------------------------------- | -------------------------- |
+| custodysim.baseUrl               | CUSTODYSIM_BASE_URL                | debug / debugR8            |
+| custodysim.realtimeUrl           | CUSTODYSIM_REALTIME_URL            | debug / debugR8            |
+| custodysim.productionBaseUrl     | CUSTODYSIM_PRODUCTION_BASE_URL     | production                 |
+| custodysim.productionRealtimeUrl | CUSTODYSIM_PRODUCTION_REALTIME_URL | production                 |
+| custodysim.localNetwork          | 无                                 | 可选，联调本地网络能力判定 |
+
+示例（替换为自己的开发机地址）：
+
+```properties
+custodysim.baseUrl=http://192.168.1.100:3000
+custodysim.realtimeUrl=ws://192.168.1.100:3001
+```
+
+开发变体按配置的 HTTP/WS 主机生成明文放行；production/release 使用安全连接。release 忽略所有端点预置；production 未覆盖时使用构建文件的远端默认值，实时地址由 HTTPS 推导 WSS。不要为了修改默认服务器覆盖用户保存的运行时选择。
+
+运行时服务器选择只接受 HTTPS 根地址，检测失败不切换，确认后清本机旧凭据与待上传队列，再重新登录。保存的选择优先于编译默认值。详见[服务器设置](https://github.com/PDSB001/CustodySim/blob/master/docs/server-selection.md)。
+
+## 构建、验证与安装
 
 ```powershell
 .\gradlew.bat :app:assembleDebug
@@ -24,31 +59,30 @@ PDF 使用 PdfRenderer。旧 H5/WebView 阅读器与切换开关已移除。
 .\gradlew.bat :app:assembleProduction
 .\gradlew.bat :app:assembleRelease
 .\gradlew.bat :app:testDebugUnitTest
+.\gradlew.bat :app:lintDebug
 .\gradlew.bat :app:compileDebugAndroidTestKotlin
-.\gradlew.bat androidCorrespondingSource
 ```
 
-在主项目根目录执行时，使用 `.\.app-workspace\gradlew.bat -p .app-workspace`。
-服务端也可在 App 设置中配置。可选预置地址只存于忽略的 local.properties 或环境变量：
-`custodysim.baseUrl` / `CUSTODYSIM_BASE_URL`、`custodysim.realtimeUrl` /
-`CUSTODYSIM_REALTIME_URL`，production 对应 productionBaseUrl、productionRealtimeUrl
-与 CUSTODYSIM_PRODUCTION_BASE_URL、CUSTODYSIM_PRODUCTION_REALTIME_URL。
-production 的预置地址应使用 HTTPS/WSS；release 始终不嵌入地址。未配置地址也能构建，配置不随 Git 或源码包发布。
+Bash 将 .\gradlew.bat 换为 ./gradlew。JVM 单测、androidTest 编译、真实设备 instrumented 测试是不同检查，不能相互替代。
 
-APK 输出到 `app/build/outputs/apk/debug/` 、`debugR8/`、`production/` 或 `release/`。
-对手机使用 `adb install -r` 覆盖安装，避免卸载或清空数据；签名不兼容需另行处理。
-debug 关闭 R8；debugR8 开启 R8，两者使用相同联调预置和包名，可互相覆盖安装。
-debug 沿用此前 development 的 `.dev` 包名和本机 debug 签名。
+APK 默认在 app/build/outputs/apk/{变体}/；R8 mapping 在 app/build/outputs/mapping/{变体}/，保留与发布包对应的 mapping 以便还原崩溃。
 
-## 发布同步
+使用 `adb install -r <实际APK路径>` 覆盖安装。先核对 ID 与签名；debug 与 debugR8 同 .dev ID、本机 debug 签名可互相覆盖，正式包必须保持签名连续性。不要为排查问题卸载或清空用户数据。
 
-先在 `.app-workspace` 提交 App 改动，主仓库的 Web/API 改动独立提交。
-从主项目目录执行 `scripts/sync-app-release.ps1 -CheckOnly` 检查可同步性，再执行
-`scripts/sync-app-release.ps1`，将 App 提交 fast-forward 到 `../CustodySim-app` 的 main，
-并在那里构建 release 和 production、运行单元测试与生成对应源码包。默认不会推送远程；明确发布
-需要再加 `-Push`。脚本不覆盖未提交改动，不用文件复制抹掉历史，不提交私有配置。
-源码包与签名后的 APK 应对应同一版本，遵循 App 的 AGPL 分发要求。
+## 发布与准确对应源码
 
-当前 production/release/debugR8 R8 对 Jsoup 1.22.1 的两种可选 re2j 类使用精确 dontwarn 规则；应用使用
-JDK 正则路径。上游确认：https://github.com/jhy/jsoup/issues/2459 。
-旧性能脚手架和历史变体记录仅作为历史材料，不代表当前可运行流程。
+1. 在本仓库确认改动与版本，记录提交，等待 [Android CI](ci.md)。
+2. 本机使用维护者自己的签名流程生成正式 production 或 release；当前仓库不默认提供发布签名配置。
+3. 从同一源码版本运行：
+
+```powershell
+.\gradlew.bat androidCorrespondingSource
+node scripts/verify-source-archive.mjs
+```
+
+源码为 build/distributions/CustodySim-Android-corresponding-source.zip。本机校验脚本需要 unzip 在 PATH，Windows 可用 Git for Windows 的 usr/bin/unzip.exe。
+
+4. 核对 APK、源码 ZIP 与提交的对应关系，记录 SHA-256；按[许可说明](../README-LICENSE.md)一起提供。
+5. 在实际设备验证登录、升级、聊天、阅读、计时、定位与权限。CI 不证明后台成功率或帧率。
+
+签名材料、私有端点、local.properties、APK 与构建缓存不入 Git；不上传 Android 发布密钥到 CI。
