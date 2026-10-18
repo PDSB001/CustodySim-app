@@ -324,7 +324,7 @@ java.lang.OutOfMemoryError: Failed to allocate a 35248776 byte allocation with 1
 已做的降峰值改动（`reader/html/HtmlReader.kt`）：`htmlReaderMarkup` 改为一次性写入预分配缓冲、转义单遍完成，去掉 `trimIndent()` 与链式 `replace()`；
 host 文档改为缓存字节，`shouldInterceptRequest` 不再每次重新编码整本。结构性改动随后落地：host 文档只带元数据，
 章节正文按 `/reader/chapter/{i}` 逐节取用，长章节的分块只对真正读到的章节计算，整本拷贝与预先分块都不再存在
-（详见 [阅读器分格式翻页重构](../android-reader-pagination-refactor.md) 的第 10 节）。
+（详见 [阅读器分格式翻页重构](android-reader-pagination-refactor.md) 的第 10 节）。
 
 其它仍然成立的检查项：`shouldInterceptRequest` 对 `assets.open` 与 `runBlocking { repository.resource(...) }` 没有兜底，失败时会从 Chromium 线程抛异常，应补 try/catch；
 `DocumentReaderKt`（`readerHtml`/`readerScript`）已被 R8 整类删除，instrumented 测试若指向优化变体会抛 `NoSuchMethodError`；

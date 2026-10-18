@@ -13,4 +13,4 @@ this core. The app currently uses this engine for EPUB/DOCX in all four build ty
 TXT and PDF use their own native engines. Compilation alone does not establish
 real-device rendering or gesture quality. See the current
 [reader and cache guide](../docs/reader-cache.md) and the historical
-[integration record](../docs/android-episteme-integration.md).
+[integration record](../docs/archive/android-episteme-integration.md).

@@ -49,4 +49,4 @@ EPUB/DOCX 使用 Episteme，TXT 使用 StaticLayout，PDF 使用 PdfRenderer，�
 
 源码 ZIP 不含签名、local.properties 或用户数据。编译、lint 和 JVM 单测不证明真实设备的手势、帧率、后台定位或签名升级已验收。
 
-迁移历史来自原 Web 仓库 android 子树，见[迁移记录](docs/repository-migration.md)。旧 .app-workspace、development/benchmark/H5 阅读器说明仅在历史归档中保留。
+迁移历史来自原 Web 仓库 android 子树，见[迁移记录](docs/archive/repository-migration.md)。旧 .app-workspace、development/benchmark/H5 阅读器说明仅在历史归档中保留。

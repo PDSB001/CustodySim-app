@@ -18,19 +18,23 @@
 
 使用者请看 [Web 使用指南](https://github.com/PDSB001/CustodySim/blob/master/docs/user-guide.md)；运行时端点选择见[服务器设置](https://github.com/PDSB001/CustodySim/blob/master/docs/server-selection.md)。
 
+维护工具见[脚本导航](../scripts/README.md)。
+
 ## 历史记录
+
+历史材料已集中在 [archive](archive/README.md)。
 
 以下记录保留当时的路径、变体、设备和结果，**不要直接复制旧命令作为当前流程**：
 
-- [独立仓库迁移](repository-migration.md)
-- [仓库拆分计划](android-stabilization-and-repo-split.md)
-- [阅读器翻页方案](android-reader-pagination-refactor.md)
-- [Episteme 接入](android-episteme-integration.md)
+- [独立仓库迁移](archive/repository-migration.md)
+- [仓库拆分计划](archive/android-stabilization-and-repo-split.md)
+- [阅读器翻页方案](archive/android-reader-pagination-refactor.md)
+- [Episteme 接入](archive/android-episteme-integration.md)
 - [历史原生规格与事故](archive/android-client-legacy.md)
-- [性能复测](android-performance.md)
-- [Miuix 改造](android-ui-refactor.md)
-- [玻璃材质试点](android-glass-pilot.md)
-- [警告清理](android-warning-audit.md)
-- [API 37 适配记录](android-target-api-37.md)
+- [性能复测](archive/android-performance.md)
+- [Miuix 改造](archive/android-ui-refactor.md)
+- [玻璃材质试点](archive/android-glass-pilot.md)
+- [警告清理](archive/android-warning-audit.md)
+- [API 37 适配记录](archive/android-target-api-37.md)
 
 修改服务端契约须同步双仓文档与回归；修改上游代码用 vendor 脚本更新 UPSTREAM.json。私有配置、密钥、APK、缓存和真实用户截图不入 Git。图解是结构说明，不能当作真机性能数据。
