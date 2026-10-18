@@ -56,7 +56,7 @@ class HttpCacheTest {
         val request = Request.Builder().url("http://$host/api/chat/messages/id/image")
             .header("Authorization", "Bearer $token").build()
         client.newCall(request).execute().use {
-            assertEquals("image", it.body!!.string()) // Fully consume body to commit the cache entry.
+            assertEquals("image", it.body.string()) // Fully consume body to commit the cache entry.
             assertEquals(cached, it.cacheResponse != null)
             assertEquals(!cached, it.networkResponse != null)
         }

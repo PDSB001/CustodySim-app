@@ -1,6 +1,6 @@
 # Gradle 与构建缓存
 
-核对日期：2026-10-18。当前 wrapper 9.8.0，配置见 [gradle.properties](../gradle.properties)。
+核对日期：2026-10-18。当前 wrapper 9.8.1，配置见 [gradle.properties](../gradle.properties)。
 
 ```properties
 org.gradle.parallel=true

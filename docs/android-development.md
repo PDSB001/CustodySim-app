@@ -9,9 +9,9 @@
 | 项目                | 当前仓库配置                       |
 | ------------------- | ---------------------------------- |
 | JDK                 | CI 为 Temurin 17；Java 编译目标 17 |
-| Gradle wrapper      | 9.8.0                              |
-| AGP / Kotlin        | 9.4.1 / 2.4.0                      |
-| Compose BOM / Miuix | 2026.09.00 / 0.9.3                 |
+| Gradle wrapper      | 9.8.1                              |
+| AGP / Kotlin        | 9.4.1 / 2.4.21                     |
+| Compose BOM / Miuix | 2026.09.00 / 0.9.4                 |
 | Android SDK         | min 26 / compile 37 / target 37    |
 | 应用版本            | 1.6.1-test / versionCode 4         |
 

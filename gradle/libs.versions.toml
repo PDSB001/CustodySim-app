@@ -1,16 +1,16 @@
 [versions]
 # AGP 9.4 要求 Gradle >= 9.6.0（官方兼容表）；AGP 9 起内置 Kotlin，无需 kotlin-android 插件。
 agp = "9.4.1"
-# MiuiX 0.9.3 的元数据是 Kotlin 2.4.0 编译的，低于此版本读不了（AGP 9 内置的 KGP 默认 2.2.10）
-kotlin = "2.4.0"
+# Kotlin 编译器与 Compose / Serialization 插件保持同版，覆盖 AGP 内置的旧 KGP。
+kotlin = "2.4.21"
 composeBom = "2026.09.00"
 
-coreKtx = "1.16.0"
-lifecycle = "2.9.4"
-activityCompose = "1.9.3"
-work = "2.9.1"
-datastore = "1.1.1"
-okhttp = "4.12.0"
+coreKtx = "1.19.1"
+lifecycle = "2.11.0"
+activityCompose = "1.13.0"
+work = "2.12.0"
+datastore = "1.2.1"
+okhttp = "5.5.0"
 junit = "4.13.2"
 backdrop = "2.0.1"
 androidSvg = "1.4"
@@ -18,17 +18,17 @@ androidTestRunner = "1.7.0"
 profileInstaller = "1.4.1"
 exifInterface = "1.4.2"
 # Reviewed Episteme dependency set; versions are pinned for reproducible imports.
-readerJsoup = "1.22.1"
+readerJsoup = "1.23.2"
 readerTimber = "5.0.1"
-readerCoroutines = "1.10.2"
-readerSerialization = "1.9.0"
+readerCoroutines = "1.11.0"
+readerSerialization = "1.11.0"
 # MiuiX（小米 HyperOS 风格 Compose 组件库）。纯 Android 项目必须用带 -android 后缀的构件。
-miuix = "0.9.3"
+miuix = "0.9.4"
 # MiuiX 的弹层内部用 NavigationBackHandler，需提供 navigationevent 的 dispatcher owner。
-navigationEvent = "1.1.2"
+navigationEvent = "1.2.0"
 
 [libraries]
-test-json = { module = "org.json:json", version = "20260719" }
+test-json = { module = "org.json:json", version = "20260814" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }

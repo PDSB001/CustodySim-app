@@ -6,7 +6,7 @@
 
 ## 环境与检查
 
-Ubuntu 24.04、Temurin JDK 17、仓库 Gradle wrapper 9.8.0、Android API 37 / build-tools 37.0.0。工具链以 [setup-android](../.github/actions/setup-android/action.yml) 和构建文件为准。
+Ubuntu 24.04、Temurin JDK 17、仓库 Gradle wrapper 9.8.1、Android API 37 / build-tools 37.0.0。工具链以 [setup-android](../.github/actions/setup-android/action.yml) 和构建文件为准。Dependabot 每周检查 Gradle 与 Actions，兼容 minor/patch 合组；版本与验证见[依赖升级](dependency-upgrades.md)。
 
 1. workflow 静态检查、Gradle wrapper 校验；PR 仅读主分支缓存。
 2. `node scripts/verify-episteme.mjs`，校验导入源与 UPSTREAM.json 哈希。
