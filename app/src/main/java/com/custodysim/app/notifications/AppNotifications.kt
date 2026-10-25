@@ -203,12 +203,17 @@ object AppNotifications {
             val community = payload.optString("kind") == "COMMUNITY"
             val probation = kind == "PROBATION"
             val channel = if (chat) "chat_messages" else if (checkin) "checkin_reminders" else if (task) "task_reminders" else if (community) "community_replies" else if (probation) "account_reminders" else "system_notices"
-            manager.createNotificationChannel(NotificationChannel(channel, if (chat) "聊天消息" else if (checkin) "打卡提醒" else if (task) "任务提醒" else if (community) "社区回复" else if (probation) "账号考察" else "站内信", NotificationManager.IMPORTANCE_DEFAULT))
+            // Channel behavior is immutable after creation. Use a new ID so existing
+            // installs can receive the corrected vibration default without app data reset.
+            val channelId = "${channel}_v2"
+            manager.createNotificationChannel(NotificationChannel(channelId, if (chat) "聊天消息" else if (checkin) "打卡提醒" else if (task) "任务提醒" else if (community) "社区回复" else if (probation) "账号考察" else "站内信", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                enableVibration(true)
+            })
             val intent = Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 .putExtra("notification",payload.toString())
             val id = (if (chat) payload.optString("conversationId") else if (community) payload.optString("postId") else payload.optString("entityId")).hashCode()
             val tap = PendingIntent.getActivity(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            manager.notify(channel, id, NotificationCompat.Builder(context,channel)
+            manager.notify(channel, id, NotificationCompat.Builder(context,channelId)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(if (chat) payload.optString("senderName").take(60) else if (checkin) "打卡提醒" else if (task) "任务提醒" else if (community) "匿名社区" else if (probation) "首周考察提醒" else "CustodySim 通知")
                 .setContentText(if (chat) "发来一条消息" else if (checkin) "当前有待完成的打卡，请在截止前打开 App 完成" else if (task) when(payload.optString("taskEvent")) {
