@@ -1,5 +1,12 @@
 // 仓库顺序：阿里云镜像在前（国内快），官方源兜底。
 pluginManagement {
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == "com.google.gms.google-services") {
+                useModule("com.google.gms:google-services:${requested.version}")
+            }
+        }
+    }
     repositories {
         maven("https://maven.aliyun.com/repository/public")
         maven("https://maven.aliyun.com/repository/google")
