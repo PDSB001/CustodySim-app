@@ -36,7 +36,7 @@ tasks.register<Zip>("androidCorrespondingSource") {
         include("app/src/**", "app/*.gradle.kts", "app/*.pro", "app/lint*.xml")
         include("episteme-core/src/**", "episteme-core/*.gradle.kts", "episteme-core/LICENSE", "episteme-core/README.md", "episteme-core/UPSTREAM.json")
         exclude("**/build/**", "**/.gradle/**", "**/.kotlin/**", "**/.idea/**")
-        exclude("local.properties", "**/*.jks", "**/*.keystore", "**/*.pem", "**/*.p12", "**/*.iml", "**/.env*", "**/captures/**")
+        exclude("local.properties", "push.local.properties", "**/*.jks", "**/*.keystore", "**/*.pem", "**/*.p12", "**/*.iml", "**/.env*", "**/captures/**")
         exclude("**/google-services*.json", "**/GoogleService-Info*.plist", "**/*firebase-adminsdk*.json", "**/*service-account*.json", "**/*serviceAccount*.json", "**/.firebaserc", "**/.firebase/**", "**/firebase-debug*.log")
     }
 

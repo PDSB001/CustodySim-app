@@ -9,7 +9,7 @@ import java.util.zip.GZIPInputStream
 
 /** OkHttp may already have decoded HTTP gzip; sniff bytes to avoid decoding twice. */
 internal fun parseReaderResponse(response: Response): ApiResult<JSONObject> {
-    val body = response.body ?: return ApiResult.Err(ApiErrorCode.UNKNOWN, "阅读正文为空", response.code)
+    val body = response.body
     val input = BufferedInputStream(body.byteStream())
     val text = if (response.header("X-CustodySim-Reader-Representation") == "gzip-v1") {
         input.mark(2)

@@ -13,6 +13,8 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
@@ -32,6 +34,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Edit
+import top.yukonga.miuix.kmp.icon.extended.Notes
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -319,7 +322,19 @@ private fun CommunityWorkspace(container: AppContainer, onClose: () -> Unit, sna
                     title = if (mine) "我的帖子" else "匿名社区", scrollBehavior = scrollBehavior,
                     navigationIcon = { CommunityBackButton(!active, ::back) },
                     actions = {
-                        TextButton(text = if (mine) "全部帖子" else "我的帖子", enabled = active && !busy, onClick = ::switchFeed)
+                        com.custodysim.app.ui.common.SheetActionButton(
+                            text = if (mine) "全部帖子" else "我的帖子",
+                            icon = MiuixIcons.Notes,
+                            selected = mine,
+                            state = if (mine) "正在查看我的帖子" else "正在查看全部帖子",
+                            onClick = {
+                                if (active && !busy && !feedLoading) {
+                                    feedLoading = true
+                                    switchFeed()
+                                }
+                            },
+                            enabled = active && !busy && !feedLoading,
+                        )
                         CommunityRefreshButton(feedLoading, active && !feedLoading, ::refreshFeed)
                         CommunityActionIconButton(onClick = { error = null; editorState.requestScrollToItem(0); composing = true }, enabled = active,
                             backgroundColor = MiuixTheme.colorScheme.primary.copy(alpha = 0.10f)) {

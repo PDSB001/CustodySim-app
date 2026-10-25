@@ -71,6 +71,9 @@ val localPropertiesFile = rootProject.file("local.properties")
 val localProperties = Properties().apply {
     if (localPropertiesFile.exists()) localPropertiesFile.inputStream().use { load(it) }
 }
+val privatePushProperties = Properties().apply {
+    rootProject.file("push.local.properties").takeIf { it.isFile }?.inputStream()?.use { load(it) }
+}
 
 // Private defaults never come from tracked gradle.properties.
 fun serverUrl(propertyKey: String, environmentKey: String): String =
@@ -79,7 +82,10 @@ fun serverUrl(propertyKey: String, environmentKey: String): String =
 val devBaseUrl = serverUrl("custodysim.baseUrl", "CUSTODYSIM_BASE_URL")
 val umengAppKey = serverUrl("custodysim.umengAppKey", "CUSTODYSIM_UMENG_APP_KEY")
 val umengMessageSecret = serverUrl("custodysim.umengMessageSecret", "CUSTODYSIM_UMENG_MESSAGE_SECRET")
+val huaweiAppId = providers.environmentVariable("CUSTODYSIM_HUAWEI_APP_ID").orNull?.trim().orEmpty()
+    .ifEmpty { privatePushProperties.getProperty("custodysim.huaweiAppId")?.trim().orEmpty() }
 require(listOf(umengAppKey, umengMessageSecret).all { it.isEmpty() || it.matches(Regex("[A-Za-z0-9]+")) }) { "Invalid push configuration" }
+require(huaweiAppId.isEmpty() || huaweiAppId.matches(Regex("[0-9]+"))) { "Invalid Huawei App ID" }
 val devRealtimeUrl = serverUrl("custodysim.realtimeUrl", "CUSTODYSIM_REALTIME_URL")
 val productionBaseUrl = serverUrl("custodysim.productionBaseUrl", "CUSTODYSIM_PRODUCTION_BASE_URL")
     .ifEmpty { "https://www.jxydev.top" }
@@ -143,6 +149,8 @@ android {
         buildConfigField("boolean", "NEEDS_LOCAL_NETWORK", "false")
         buildConfigField("String", "UMENG_APP_KEY", "\"\"")
         buildConfigField("String", "UMENG_MESSAGE_SECRET", "\"\"")
+        buildConfigField("String", "HUAWEI_APP_ID", "\"\"")
+        manifestPlaceholders["huaweiAppId"] = "appid="
     }
 
     buildFeatures {
@@ -166,10 +174,13 @@ android {
             buildConfigField("boolean", "NEEDS_LOCAL_NETWORK", needsLocalNetwork.toString())
             buildConfigField("String", "BASE_URL_ENCODED", "\"${encodedUrl(devBaseUrl)}\"")
             buildConfigField("String", "REALTIME_URL_ENCODED", "\"${encodedUrl(devRealtimeUrl)}\"")
+            buildConfigField("String", "HUAWEI_APP_ID", "\"\"")
         }
         release {
             buildConfigField("String", "UMENG_APP_KEY", "\"$umengAppKey\"")
             buildConfigField("String", "UMENG_MESSAGE_SECRET", "\"$umengMessageSecret\"")
+            buildConfigField("String", "HUAWEI_APP_ID", "\"$huaweiAppId\"")
+            manifestPlaceholders["huaweiAppId"] = "appid=$huaweiAppId"
             buildConfigField("String", "BASE_URL_ENCODED", "\"\"")
             buildConfigField("String", "REALTIME_URL_ENCODED", "\"\"")
             buildConfigField("boolean", "NEEDS_LOCAL_NETWORK", "false")
@@ -199,6 +210,9 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             buildConfigField("String", "BASE_URL_ENCODED", "\"${encodedUrl(productionBaseUrl)}\"")
             buildConfigField("String", "REALTIME_URL_ENCODED", "\"${encodedUrl(productionRealtimeUrl)}\"")
+            buildConfigField("String", "HUAWEI_APP_ID", "\"$huaweiAppId\"")
+            manifestPlaceholders["huaweiAppId"] = "appid=$huaweiAppId"
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
@@ -221,6 +235,8 @@ dependencies {
     implementation(libs.umeng.common)
     implementation(libs.umeng.asms)
     implementation(libs.umeng.push)
+    implementation(libs.umeng.huawei)
+    implementation(libs.huawei.push)
     implementation(project(":episteme-core"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

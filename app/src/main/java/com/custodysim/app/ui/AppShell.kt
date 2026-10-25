@@ -63,6 +63,9 @@ import top.yukonga.miuix.kmp.icon.extended.Notes
 import top.yukonga.miuix.kmp.icon.extended.Recent
 import top.yukonga.miuix.kmp.icon.extended.Tasks
 import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.VolumeOff
+import top.yukonga.miuix.kmp.icon.extended.VolumeUp
+import androidx.compose.ui.semantics.stateDescription
 import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.preference.*
@@ -116,6 +119,9 @@ fun AppShell(container: AppContainer, session: SessionUser, onLogout: () -> Unit
     var chatConversationTitle by remember { mutableStateOf<String?>(null) }
     var chatBackRequest by remember { mutableIntStateOf(0) }
     var chatRefreshRequest by remember { mutableIntStateOf(0) }
+    var chatMuteRequest by remember { mutableIntStateOf(0) }
+    var chatMuted by remember { mutableStateOf<Boolean?>(null) }
+    var chatSavingMute by remember { mutableStateOf(false) }
     val stateHolder = rememberSaveableStateHolder()
     val snackbarState = remember { SnackbarHostState() }
     val snackbarScope = rememberCoroutineScope()
@@ -155,6 +161,15 @@ fun AppShell(container: AppContainer, session: SessionUser, onLogout: () -> Unit
                             }
                         },
                         actions = {
+                            IconButton(onClick = { chatMuteRequest++ },
+                                enabled = chatMuted != null && !chatSavingMute,
+                                modifier = Modifier.size(48.dp).semantics {
+                                    stateDescription = if (chatSavingMute) "正在保存" else if (chatMuted == true) "免打扰已开启" else "免打扰已关闭"
+                                }) {
+                                Icon(if (chatMuted == true) MiuixIcons.VolumeOff else MiuixIcons.VolumeUp,
+                                    contentDescription = if (chatMuted == true) "关闭免打扰" else "开启免打扰",
+                                    tint = if (chatMuted == true) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface)
+                            }
                             IconButton(onClick = { chatRefreshRequest++ }) {
                                 Icon(MiuixIcons.Refresh, contentDescription = stringResource(R.string.refresh))
                             }
@@ -173,6 +188,7 @@ fun AppShell(container: AppContainer, session: SessionUser, onLogout: () -> Unit
                             IconButton(onClick = { showCommunity = true }) {
                                 Icon(MiuixIcons.Community, contentDescription = "匿名社区")
                             }
+                            // 小喇叭保留在顶栏：它是查看公告的快捷入口；"我的"页另有通知设置入口。
                             IconButton(onClick = { showNotices = true }) {
                                 Icon(MiuixIcons.Promotions, contentDescription = stringResource(R.string.portal_notices), tint = MiuixTheme.colorScheme.primary)
                             }
@@ -269,9 +285,12 @@ fun AppShell(container: AppContainer, session: SessionUser, onLogout: () -> Unit
                                 openConversation = requestedConversation, openRequest = notificationRequest,
                                 conversationLayoutReady = inConversation,
                                 onConversationChanged = { chatConversationTitle = it },
+                                onMuteStateChanged = { muted, saving -> chatMuted = muted; chatSavingMute = saving },
+                                muteRequest = chatMuteRequest,
                                 backRequest = chatBackRequest, refreshRequest = chatRefreshRequest)
                             MainTab.MINE -> MineScreen(container, session, onLogout, scrollBehavior, onServerSettings,
-                                onCommunity = { showCommunity = true }, onScores = { showScores = true })
+                                onCommunity = { showCommunity = true }, onScores = { showScores = true },
+                                onNotices = { showNotices = true })
                         }
                     }
                     }
@@ -331,7 +350,7 @@ fun roleLabel(role: String): String = when (role) {
 
 @Composable
 private fun MineScreen(container: AppContainer, session: SessionUser, onLogout: () -> Unit, scrollBehavior: ScrollBehavior, onServerSettings: () -> Unit,
-    onCommunity: () -> Unit, onScores: () -> Unit) {
+    onCommunity: () -> Unit, onScores: () -> Unit, onNotices: () -> Unit) {
     val context = LocalContext.current
     val appearance = LocalAppearance.current
     val haptics = LocalHapticFeedback.current
@@ -439,6 +458,7 @@ private fun MineScreen(container: AppContainer, session: SessionUser, onLogout: 
                 SectionTitle(stringResource(R.string.about))
                 SettingGroup {
                     ArrowPreference(title = "服务器设置", onClick = onServerSettings)
+                    ArrowPreference(title = "通知与消息", summary = "公告、提醒与消息推送开关", onClick = onNotices)
                     ArrowPreference(title = "匿名社区", summary = "分享日常与自愿公开的档案内容", onClick = onCommunity)
                     ArrowPreference(title = "考核计分板", summary = "周积分、计分明细与执行记录", onClick = onScores)
                     InfoRow(stringResource(R.string.version), BuildConfig.VERSION_NAME)

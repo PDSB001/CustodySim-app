@@ -37,6 +37,18 @@ Google Services 只处理含有当前构建包名的配置。没有私有配置�
 
 `common:10.0.1` 在当前 R8 有缺少 stack map table 的字节码警告。需要在真机验证初始化与注册，不能只凭 R8 成功保证运行无误。
 
-当前集成友盟通用通道与 FCM，未配置其他手机厂商通道。生产激活与完整操作步骤见 Web 仓库 `docs/app-push.md`。优先验证前台、后台、点击、重复投递、退出账号和切换服务器；不可把编译通过当成离线必达证明。
+当前集成友盟通用通道、FCM 与华为厂商通道适配。华为使用 U-Push 官方 `huawei-umengaccs:2.3.0` + HMS Push `6.13.0.301`；只有 release/production 构建配置了华为 App ID 时才会调用 `HuaWeiRegister`，并通过厂商点击 Activity 进入现有通知路由。生产激活与完整操作步骤见 Web 仓库 `docs/app-push.md`。优先验证前台、后台、点击、重复投递、退出账号和切换服务器；不可把编译通过当成离线必达证明。
+
+## 华为厂商通道
+
+发布构建通过本地 Git 忽略文件 `push.local.properties` 或构建环境变量注入华为 App ID，不提交 AppGallery 配置或密钥：
+
+```properties
+custodysim.huaweiAppId=<Huawei App ID>
+```
+
+或设置 `CUSTODYSIM_HUAWEI_APP_ID`。debug/debugR8 固定不启用，避免 `.dev` 包名误注册。AppGallery Connect 中的应用包名必须为 `com.custodysim.app`，并登记最终 APK 使用的签名证书 SHA-256。友盟厂商配置需要华为 App ID 与 Client Secret；Client Secret 只填友盟控制台，不能放 App、服务器环境变量或 GitHub。华为服务回执地址按友盟要求配置为 `https://ack.upush.umeng.com/hw/`。
+
+开启通知并完成友盟注册后，客户端才触发华为注册。应用的通知设置分别显示友盟、FCM 和华为通道状态；华为状态“已请求注册”不是离线送达证明。U-Push 请求会带 `channel_activity`，由 `.notifications.ProviderNotificationClickActivity` 处理托管通知点击并复用账号绑定校验。真机验证需使用已配置签名、已开通 HMS Push 的华为设备；设备需安装可用的 HMS Core。华为注册日志 `HuaWeiRegister` 可能含 Push Token，不要公开原始日志。
 
 官方文档：[手动集成](https://devs.umeng.com/docs/67966/detail/98585)、[SDK 当前版本](https://devs.umeng.com/sdk)。

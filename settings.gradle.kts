@@ -26,6 +26,7 @@ dependencyResolutionManagement {
         maven("https://maven.aliyun.com/repository/public")
         maven("https://maven.aliyun.com/repository/google")
         google()
+        maven("https://developer.huawei.com/repo/")
         mavenCentral()
     }
 }

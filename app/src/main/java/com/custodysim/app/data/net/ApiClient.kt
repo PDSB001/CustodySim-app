@@ -75,10 +75,9 @@ class ApiClient(
                 val result = try {
                     response.use {
                         if (it.isSuccessful) {
-                            it.body?.bytes()?.let { bytes -> ApiResult.Ok(bytes) }
-                                ?: ApiResult.Err(ApiErrorCode.UNKNOWN, "Empty image response", it.code)
+                            ApiResult.Ok(it.body.bytes())
                         } else {
-                            val error = parseEnvelope(it.body?.string().orEmpty(), it.code)
+                            val error = parseEnvelope(it.body.string(), it.code)
                             (error as? ApiResult.Err)
                                 ?: ApiResult.Err(ApiErrorCode.UNKNOWN, "Image request failed", it.code)
                         }
@@ -237,7 +236,7 @@ class ApiClient(
 
     private fun execute(request: Request): ApiResult<JSONObject> = try {
         client.newCall(request).execute().use { response ->
-            val result = parseEnvelope(response.body?.string().orEmpty(), response.code)
+            val result = parseEnvelope(response.body.string(), response.code)
             if (result is ApiResult.Err && response.code == 429) {
                 result.copy(retryAfterSeconds = retryAfterSeconds(response.header("Retry-After"), result.message))
             } else result
@@ -249,7 +248,7 @@ class ApiClient(
 
     private fun executeList(request: Request): ApiResult<JSONArray> = try {
         client.newCall(request).execute().use { response ->
-            val body = response.body?.string().orEmpty()
+            val body = response.body.string()
             try {
                 val root = JSONObject(body)
                 if (root.optBoolean("success", false)) {
@@ -307,7 +306,7 @@ class ApiClient(
 
         val result = try {
             bareClient.newCall(request).execute().use { response ->
-                parseEnvelope(response.body?.string().orEmpty(), response.code)
+                parseEnvelope(response.body.string(), response.code)
             }
         } catch (_: Exception) {
             return@withLock null

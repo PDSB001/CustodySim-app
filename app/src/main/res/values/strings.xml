@@ -58,7 +58,7 @@
     <string name="portal_empty_notices">暂无可查看的通知</string>
     <string name="portal_read">已读</string>
     <string name="portal_unread">未读</string>
-    <string name="portal_mark_read">确认已阅</string>
+    <string name="portal_mark_read">标为已读</string>
     <string name="portal_empty_applications">暂无历史申请</string>
     <string name="portal_empty_archives">暂无已归档档案</string>
     <string name="archive_exported">档案图片已保存到图片/CustodySim</string>

@@ -235,6 +235,7 @@ private fun ChatBubble(
 @Composable
 fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: ScrollBehavior,
     onConversationChanged: (String?) -> Unit, backRequest: Int, refreshRequest: Int,
+    onMuteStateChanged: (Boolean?, Boolean) -> Unit, muteRequest: Int,
     conversationLayoutReady: Boolean, openConversation: String? = null, openRequest: Int = 0) {
     var conversations by remember { mutableStateOf<List<ChatConversation>>(emptyList()) }
     val notificationContext = LocalContext.current
@@ -329,6 +330,33 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
     val chatFallbackTitle = stringResource(R.string.chat)
     var handledBackRequest by remember { mutableIntStateOf(backRequest) }
     var handledRefreshRequest by remember { mutableIntStateOf(refreshRequest) }
+    var handledMuteRequest by remember { mutableIntStateOf(muteRequest) }
+    LaunchedEffect(selectedId, selected?.muted, savingMute) {
+        onMuteStateChanged(selected?.muted, savingMute)
+    }
+    LaunchedEffect(muteRequest) {
+        if (muteRequest <= handledMuteRequest) return@LaunchedEffect
+        handledMuteRequest = muteRequest
+        val conversation = selected ?: return@LaunchedEffect
+        if (savingMute) return@LaunchedEffect
+        savingMute = true
+        // The request effect only dispatches the save; a second tap must not cancel it.
+        scope.launch {
+            try {
+                when (val result = container.chatRepository.setMuted(conversation.id, !conversation.muted)) {
+                    is ApiResult.Err -> snackbar(result.message)
+                    is ApiResult.Ok -> {
+                        val muted = result.data.optBoolean("muted")
+                        conversations = conversations.map { if (it.id == conversation.id) it.copy(muted = muted) else it }
+                        com.custodysim.app.notifications.NotificationStore(notificationContext).use {
+                            it.setConversationMuted(session.id, conversation.id, muted)
+                        }
+                        if (muted) com.custodysim.app.notifications.AppNotifications.cancelConversation(notificationContext, conversation.id)
+                    }
+                }
+            } finally { savingMute = false }
+        }
+    }
     LaunchedEffect(selectedId, selected?.title) {
         onConversationChanged(if (selectedId == null) null else selected?.title ?: chatFallbackTitle)
     }
@@ -537,25 +565,6 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
     } else {
         Column(Modifier.fillMaxSize().imePadding().navigationBarsPadding()) {
             error?.let { NoticeBanner(it, error = true) }
-            Row(Modifier.fillMaxWidth().padding(horizontal = AppSpace.page), horizontalArrangement = Arrangement.End) {
-                TextButton(text = if (selected?.muted == true) "消息免打扰：已开启" else "消息免打扰：已关闭", enabled = selected != null && !savingMute, onClick = {
-                    val conversation = selected ?: return@TextButton
-                    savingMute = true
-                    scope.launch {
-                        try {
-                            when (val result = container.chatRepository.setMuted(conversation.id, !conversation.muted)) {
-                                is ApiResult.Err -> snackbar(result.message)
-                                is ApiResult.Ok -> {
-                                    val muted = result.data.optBoolean("muted")
-                                    conversations = conversations.map { if (it.id == conversation.id) it.copy(muted = muted) else it }
-                                    com.custodysim.app.notifications.NotificationStore(notificationContext).use { it.setConversationMuted(session.id, conversation.id, muted) }
-                                    if (muted) com.custodysim.app.notifications.AppNotifications.cancelConversation(notificationContext, conversation.id)
-                                }
-                            }
-                        } finally { savingMute = false }
-                    }
-                })
-            }
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val bubbleMaxWidth = maxWidth * 0.78f
             LazyColumn(state = messageListState,

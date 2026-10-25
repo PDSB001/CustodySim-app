@@ -38,12 +38,14 @@ fun OverlaySheet(
      * 内容要占满这块区域时自行加 `Modifier.fillMaxSize()`，短内容（加载 / 空态）默认垂直居中。
      */
     bodyFraction: Float? = null,
+    endAction: @Composable (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     BackHandler(show) { if (!busy) onDismiss() }
     OverlayBottomSheet(
         show = show,
         title = title,
+        endAction = endAction,
         onDismissRequest = { if (!busy) onDismiss() },
         onDismissFinished = onDismissFinished,
         allowDismiss = !busy,

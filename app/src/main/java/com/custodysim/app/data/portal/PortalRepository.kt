@@ -5,7 +5,7 @@ import com.custodysim.app.data.net.ApiResult
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class PortalNotice(val id: String, val title: String, val content: String, val read: Boolean, val updatedAt: String = "", val priority: String = "NORMAL", val publishedAt: String = "", val groupCount: Int = 0)
+data class PortalNotice(val id: String, val title: String, val content: String, val read: Boolean, val updatedAt: String = "", val priority: String = "NORMAL", val publishedAt: String = "", val groupCount: Int = 0, val group: NoticeGroup? = null)
 data class NoticePage(val items: List<PortalNotice>, val nextCursor: String?)
 data class PortalApplication(val id: String, val title: String, val status: String, val reason: String, val submittedAt: String?)
 data class PortalArchive(val code: String, val formName: String, val lockedAt: String?, val data: JSONObject?)
@@ -139,16 +139,16 @@ class PortalRepository(private val api: ApiClient) {
         return api.post("/api/applications", body)
     }
 
-    suspend fun notices(cursor: String? = null, keyword: String = "", unread: Boolean = false, important: Boolean = false): ApiResult<NoticePage> {
+    suspend fun notices(cursor: String? = null, keyword: String = "", unread: Boolean = false, priority: String? = null): ApiResult<NoticePage> {
         fun enc(s: String) = java.net.URLEncoder.encode(s, "UTF-8")
-        val path = "/api/notices?limit=30&keyword="+enc(keyword)+(cursor?.let { "&cursor="+enc(it) } ?: "")+(if(unread) "&unread=1" else "")+(if(important) "&priority=IMPORTANT" else "")
+        val path = "/api/notices?limit=30&keyword="+enc(keyword)+(cursor?.let { "&cursor="+enc(it) } ?: "")+(if(unread) "&unread=1" else "")+(priority?.let { "&priority="+enc(it) } ?: "")
         return when (val result = api.get(path)) {
             is ApiResult.Err -> result
             is ApiResult.Ok -> {
                 val items = result.data.optJSONArray("items") ?: JSONArray()
                 ApiResult.Ok(NoticePage((0 until items.length()).map { i ->
                     val item = items.getJSONObject(i)
-                    PortalNotice(item.optString("id"),item.optString("title"),item.optString("content"),!item.isNull("readAt"),item.optString("updatedAt"),item.optString("priority"),item.optString("publishedAt"),item.optJSONObject("metadata")?.optJSONObject("entries")?.length() ?: 0)
+                    PortalNotice(item.optString("id"),item.optString("title"),item.optString("content"),!item.isNull("readAt"),item.optString("updatedAt"),item.optString("priority"),item.optString("publishedAt"),item.optJSONObject("metadata")?.optJSONObject("entries")?.length() ?: 0,parseNoticeGroup(item.optJSONObject("metadata")))
                 }, result.data.optString("nextCursor").takeIf { it.isNotBlank() && it != "null" }))
             }
         }

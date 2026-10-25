@@ -34,6 +34,8 @@ umeng-fcm = { module = "com.umeng.umsdk:fcm-umengaccs", version = "2.3.0" }
 umeng-common = { module = "com.umeng.umsdk:common", version = "10.0.1" }
 umeng-asms = { module = "com.umeng.umsdk:asms", version = "1.8.7.2" }
 umeng-push = { module = "com.umeng.umsdk:push", version = "6.7.6" }
+umeng-huawei = { module = "com.umeng.umsdk:huawei-umengaccs", version = "2.3.0" }
+huawei-push = { module = "com.huawei.hms:push", version = "6.13.0.301" }
 test-json = { module = "org.json:json", version = "20260814" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }

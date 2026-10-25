@@ -55,6 +55,9 @@ private const val BLOCKS_PER_PAGE = 2
 /** 定位概览页的文案由 HomeScreen 解析后传入，概览自身不关心权限实现。 */
 internal data class LocationOverview(val status: String, val hint: String)
 
+/** 计分板卡片要的关键数据：本周积分、名次与参与人数。 */
+internal data class ScoreOverview(val points: Int?, val rank: Int?, val total: Int)
+
 /**
  * 卡片里的一个"tab"块。[onClick] 为空表示只读（定位概览），整块不可点。
  * [icon] 为空时标签行只留文字。
@@ -165,15 +168,44 @@ private fun locationBlock(location: LocationOverview, palette: OverviewPalette) 
     onClick = null,
 )
 
+/**
+ * 计分板单独占一页：入口落在首页的卡片集合里，点开仍是原来的弹出层。
+ * 卡片先把本周积分和名次摆出来，不用进弹层才知道自己第几。
+ */
+private fun scoreBlock(
+    score: ScoreOverview?,
+    palette: OverviewPalette,
+    onScores: () -> Unit,
+) = OverviewBlock(
+    label = "考核计分板",
+    value = score?.points?.let { if (it > 0) "+$it" else "$it" } ?: UNKNOWN_VALUE,
+    detail = when {
+        score == null -> "点击查看排名与明细"
+        score.rank == null -> "本周 ${score.total} 人参与"
+        else -> "第 ${score.rank}/${score.total} 名 · 点击查看明细"
+    },
+    icon = null,
+    tone = when {
+        score?.points == null -> palette.muted
+        score.points < 0 -> palette.error
+        score.points > 0 -> palette.primary
+        else -> palette.muted
+    },
+    onClick = onScores,
+)
+
 /** 定位概览排第一页，其余按可用空间分组；页序在进入 pager 前定型。 */
 private fun overviewPages(
     blocks: List<OverviewBlock>,
     location: LocationOverview?,
+    score: ScoreOverview?,
     palette: OverviewPalette,
     blocksPerPage: Int,
+    onScores: () -> Unit,
 ): List<List<OverviewBlock>> = buildList {
     location?.let { add(listOf(locationBlock(it, palette))) }
     blocks.chunked(blocksPerPage).forEach { add(it) }
+    add(listOf(scoreBlock(score, palette, onScores)))
 }
 
 /**
@@ -183,8 +215,8 @@ private fun overviewPages(
 @Composable
 internal fun HomeOverviewSection(
     overview: HomeOverview?, supervised: Boolean, loading: Boolean, error: String?,
-    updatedAt: String?, location: LocationOverview?, onRefresh: () -> Unit,
-    onNavigate: (MainTab) -> Unit, onNotices: () -> Unit,
+    updatedAt: String?, location: LocationOverview?, score: ScoreOverview?, onRefresh: () -> Unit,
+    onNavigate: (MainTab) -> Unit, onNotices: () -> Unit, onScores: () -> Unit,
 ) {
     val scheme = MiuixTheme.colorScheme
     val palette = OverviewPalette(primary = scheme.primary, error = scheme.error,
@@ -193,23 +225,26 @@ internal fun HomeOverviewSection(
     val fontScale = LocalDensity.current.fontScale
 
     Column {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                SectionTitle("信息概览")
+        // 说明文字与分节标题合成两行，不再套一层 SectionTitle 的上下 8dp。
+        Row(Modifier.fillMaxWidth()
+            .padding(start = AppSpace.inset, end = AppSpace.small, top = AppSpace.tiny),
+            verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text("信息概览", style = MiuixTheme.textStyles.footnote1,
+                    color = scheme.onBackgroundVariant)
                 Text(updatedAt?.let { "$it 更新" } ?: "今日安排与办理进度",
                     style = MiuixTheme.textStyles.footnote2,
-                    color = scheme.onSurfaceVariantSummary,
-                    modifier = Modifier.padding(start = AppSpace.inset, bottom = AppSpace.small))
+                    color = scheme.onSurfaceVariantSummary)
             }
             TextButton(text = if (loading) "刷新中…" else "刷新", enabled = !loading, onClick = onRefresh,
                 colors = ButtonDefaults.textButtonColors(color = Color.Transparent,
                     textColor = scheme.primary))
         }
-        // A fixed progress slot preserves the list position while counts update.
-        Box(Modifier.fillMaxWidth().height(4.dp)) {
+        // 只留 2dp 的进度位：原来 4dp 再加一个 Spacer，加载时整段会往下跳。
+        Box(Modifier.fillMaxWidth().height(2.dp)) {
             if (loading) LinearProgressIndicator(height = 2.dp)
         }
-        Spacer(Modifier.height(AppSpace.small))
+        Spacer(Modifier.height(AppSpace.tiny))
         if (error != null) {
             Card(modifier = Modifier.fillMaxWidth(), cornerRadius = AppShape.group,
                 insideMargin = PaddingValues(0.dp)) {
@@ -223,7 +258,7 @@ internal fun HomeOverviewSection(
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             // 两栏在窄屏或大字号下空间不足，保留横滑方式并让每项占满卡片。
             val blocksPerPage = if (maxWidth < 320.dp || fontScale > 1.25f) 1 else BLOCKS_PER_PAGE
-            val pages = overviewPages(blocks, location, palette, blocksPerPage)
+            val pages = overviewPages(blocks, location, score, palette, blocksPerPage, onScores)
             val pager = rememberPagerState { pages.size }
             Column {
                 HorizontalPager(
@@ -250,7 +285,8 @@ private fun OverviewCard(blocks: List<OverviewBlock>, modifier: Modifier = Modif
     Card(
         modifier = modifier.fillMaxWidth(),
         cornerRadius = AppShape.group,
-        insideMargin = PaddingValues(horizontal = AppSpace.inset, vertical = 12.dp),
+        // 维持历史规格：四边同一内边距，卡片高度不随内容上下浮动。
+        insideMargin = PaddingValues(AppSpace.inset),
         colors = CardDefaults.defaultColors(
             color = MiuixTheme.colorScheme.primary.copy(alpha = 0.10f)),
     ) {
@@ -285,10 +321,10 @@ private fun MetricBlock(block: OverviewBlock, modifier: Modifier = Modifier) {
                 overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.height(AppSpace.tiny))
-        // 一行补充信息即可；主值已说明的数量不再重复，也不预留空白行。
+        // 固定两行说明位：同卡两块、以及左右各页的文案长短不一，卡片高度都不会跟着跳。
         Text(block.detail, style = MiuixTheme.textStyles.footnote2,
             color = scheme.onSurfaceVariantSummary,
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
+            minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 

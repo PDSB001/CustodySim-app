@@ -71,7 +71,23 @@ fun HomeScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
     var overviewLoading by remember(container, session.id) { mutableStateOf(true) }
     var overviewError by remember(container, session.id) { mutableStateOf<String?>(null) }
     var overviewUpdatedAt by remember(container, session.id) { mutableStateOf<String?>(null) }
+    // 首页大卡片里直接显示本周积分与排名，点开才是完整计分板页面。
+    var scoreOverview by remember(container, session.id) { mutableStateOf<ScoreOverview?>(null) }
     val overviewMutex = remember(container, session.id) { Mutex() }
+    suspend fun refreshScore() {
+        runCatching { container.scoreRepository.load(null) }.getOrNull()?.let { result ->
+            if (result is ApiResult.Ok) {
+                val board = result.data
+                val mine = board.people.firstOrNull { it.id == session.id }
+                val rank = board.people.indexOfFirst { it.id == session.id }
+                scoreOverview = ScoreOverview(
+                    points = mine?.total,
+                    rank = if (rank >= 0) rank + 1 else null,
+                    total = board.people.size,
+                )
+            }
+        }
+    }
     suspend fun refreshOverview() {
         if (!overviewMutex.tryLock()) return
         overviewLoading = true
@@ -99,6 +115,7 @@ fun HomeScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
         owner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (isActive) {
                 refreshOverview()
+                refreshScore()
                 delay(60_000.milliseconds)
             }
         }
@@ -179,9 +196,9 @@ fun HomeScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
             // 否则会被列表统一的 16dp 间距把按钮推远。
             Column(verticalArrangement = Arrangement.spacedBy(AppSpace.medium)) {
                 HomeOverviewSection(overview, session.isSupervised, overviewLoading, overviewError,
-                    overviewUpdatedAt, locationOverview,
-                    onRefresh = { scope.launch { refreshOverview() } },
-                    onNavigate = onNavigate, onNotices = onNotices)
+                    overviewUpdatedAt, locationOverview, scoreOverview,
+                    onRefresh = { scope.launch { refreshOverview(); refreshScore() } },
+                    onNavigate = onNavigate, onNotices = onNotices, onScores = onScores)
                 if (session.isSupervised) PrimaryAction(
                     stringResource(if (reporting) R.string.report_busy else R.string.report_now),
                     busy = reporting, onClick = {
@@ -196,9 +213,7 @@ fun HomeScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
                     })
             }
         }
-        item(key = "scoreboard") {
-            SettingGroup { ArrowPreference(title = "考核计分板", summary = "查看周积分、排名与计分依据", onClick = onScores) }
-        }
+
         if (session.isSupervised) {
             item {
                 Column {

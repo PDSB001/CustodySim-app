@@ -35,3 +35,13 @@
 
 # U-Push FCM adapter is discovered by the provider SDK.
 -keep class org.android.agoo.fcm.** { *; }
+
+# U-Push Huawei vendor channel uses HMS classes and callback entry points reflectively.
+-keep class com.huawei.hianalytics.** { *; }
+-keep class com.huawei.updatesdk.** { *; }
+-keep class com.huawei.hms.** { *; }
+-keep class org.android.agoo.huawei.** { *; }
+-dontwarn android.telephony.HwTelephonyManager
+-dontwarn com.huawei.android.os.BuildEx$VERSION
+-dontwarn com.huawei.hianalytics.**
+-dontwarn com.huawei.libcore.io.**

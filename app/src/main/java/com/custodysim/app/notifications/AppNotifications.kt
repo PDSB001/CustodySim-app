@@ -20,16 +20,34 @@ import com.umeng.message.UmengNotificationClickHandler
 import com.umeng.message.api.UPushRegisterCallback
 import com.umeng.message.entity.UMessage
 import org.json.JSONObject
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
+
+data class PushRegistrationState(
+    val umeng: String = "等待友盟注册",
+    val fcm: String = "等待检查 FCM",
+    val huawei: String = "等待检查华为通道",
+)
 
 object AppNotifications {
     val pendingRoute = kotlinx.coroutines.flow.MutableStateFlow<JSONObject?>(null)
     val communityUpdate = kotlinx.coroutines.flow.MutableStateFlow<Pair<String, String>?>(null)
     @Volatile var visibleConversation: String? = null
     @Volatile var visibleCommunityPost: String? = null
-    @Volatile private var initialized = false
+    val registrationState = MutableStateFlow(PushRegistrationState())
+    private var configured = false
+    private var registered = false
+    private var registrationAttempt = 0
+    private var lastRegistrationAttempt = -30_000L
+    private var registrationPendingUntil = 0L
+    private var lastFcmAttempt = -60_000L
+    private var lastHuaweiAttempt = -600_000L
     fun permitted(context: Context) = Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     fun initialize(context: Context) {
-        if (initialized || BuildConfig.UMENG_APP_KEY.isBlank()) return
+        if (BuildConfig.UMENG_APP_KEY.isBlank()) {
+            registrationState.update { it.copy(umeng = "此安装包未配置友盟") }
+            return
+        }
         if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper() && com.umeng.commonsdk.utils.UMUtils.isMainProgress(context)) {
             Thread({ initialize(context.applicationContext) }, "push-init").start()
             return
@@ -38,45 +56,119 @@ object AppNotifications {
         if (store.get("consent") != "yes") { store.close(); return }
         store.close()
         synchronized(this) {
-            if (initialized) return
-            UMConfigure.preInit(context, BuildConfig.UMENG_APP_KEY, "custodysim")
+            if (registered) { registerFcm(context); registerHuawei(context); return }
+            val now = android.os.SystemClock.elapsedRealtime()
+            if (now < registrationPendingUntil || now - lastRegistrationAttempt < 30_000) return
+            lastRegistrationAttempt = now
+            registrationPendingUntil = now + 120_000
+            val attempt = ++registrationAttempt
+            registrationState.update { it.copy(umeng = "正在注册友盟…") }
+            try {
+                if (!configured) {
+                    UMConfigure.preInit(context, BuildConfig.UMENG_APP_KEY, "custodysim")
+                    val agent = PushAgent.getInstance(context)
+                    // Render both paths ourselves so logout/account switches and duplicate delivery are filtered.
+                    agent.setNotificationOnForeground(true)
+                    agent.messageHandler = object : UmengMessageHandler() {
+                        override fun dealWithNotificationMessage(context: Context, message: UMessage) {
+                            deliver(context, JSONObject(message.extra ?: emptyMap<String,String>()))
+                        }
+                        override fun dealWithCustomMessage(context: Context, message: UMessage) {
+                            deliver(context, JSONObject(message.extra ?: emptyMap<String,String>()))
+                        }
+                    }
+                    agent.notificationClickHandler = object : UmengNotificationClickHandler() {
+                        override fun launchApp(context: Context, message: UMessage) { open(context, JSONObject(message.extra ?: emptyMap<String,String>())) }
+                    }
+                    UMConfigure.init(context, BuildConfig.UMENG_APP_KEY, "custodysim", UMConfigure.DEVICE_TYPE_PHONE, BuildConfig.UMENG_MESSAGE_SECRET)
+                    configured = true
+                }
             val agent = PushAgent.getInstance(context)
-            // Render both paths ourselves so logout/account switches and duplicate delivery are filtered.
-            agent.setNotificationOnForeground(true)
-            agent.messageHandler = object : UmengMessageHandler() {
-                override fun dealWithNotificationMessage(context: Context, message: UMessage) {
-                    deliver(context, JSONObject(message.extra ?: emptyMap<String,String>()))
-                }
-                override fun dealWithCustomMessage(context: Context, message: UMessage) {
-                    deliver(context, JSONObject(message.extra ?: emptyMap<String,String>()))
-                }
-            }
-            agent.notificationClickHandler = object : UmengNotificationClickHandler() {
-                override fun launchApp(context: Context, message: UMessage) { open(context, JSONObject(message.extra ?: emptyMap<String,String>())) }
-            }
-            UMConfigure.init(context, BuildConfig.UMENG_APP_KEY, "custodysim", UMConfigure.DEVICE_TYPE_PHONE, BuildConfig.UMENG_MESSAGE_SECRET)
             agent.register(object : UPushRegisterCallback {
                 override fun onSuccess(token: String) {
+                    synchronized(this@AppNotifications) {
+                        if (attempt != registrationAttempt) return
+                        registered = true
+                        registrationPendingUntil = 0
+                    }
                     NotificationStore(context).use { it.put("providerToken", token) }
+                    registrationState.update { it.copy(umeng = "友盟注册成功") }
                     registerFcm(context)
+                    registerHuawei(context)
                 }
-                override fun onFailure(code: String?, message: String?) { /* Never log credentials or SDK payloads. */ }
+                override fun onFailure(code: String?, message: String?) {
+                    synchronized(this@AppNotifications) {
+                        if (attempt != registrationAttempt) return
+                        registrationPendingUntil = 0
+                    }
+                    // SDK messages can contain private payloads. Show only our own fixed text.
+                    registrationState.update { it.copy(umeng = "友盟注册失败，联网后自动重试") }
+                }
             })
             if (com.umeng.commonsdk.utils.UMUtils.isMainProgress(context)) agent.onAppStart()
-            initialized = true
+            } catch (_: Exception) {
+                registrationPendingUntil = 0
+                registrationState.update { it.copy(umeng = "友盟初始化失败，稍后自动重试") }
+            }
         }
     }
 
+    // U-Push's FCM 2.3.0 adapter uses token registration, not Firebase's new FID API.
+    @Suppress("DEPRECATION")
     @Synchronized private fun registerFcm(context: Context) {
         if (!com.umeng.commonsdk.utils.UMUtils.isMainProgress(context)) return
         NotificationStore(context).use { if (it.get("consent") != "yes") return }
-        // Missing private resources (CI/debug) and devices without Play services retain U-Push.
-        if (com.google.firebase.FirebaseApp.getApps(context).none { it.name == com.google.firebase.FirebaseApp.DEFAULT_APP_NAME }
-            && com.google.firebase.FirebaseApp.initializeApp(context) == null) return
-        if (com.google.android.gms.common.GoogleApiAvailabilityLight.getInstance()
-                .isGooglePlayServicesAvailable(context) != com.google.android.gms.common.ConnectionResult.SUCCESS) return
-        com.google.firebase.messaging.FirebaseMessaging.getInstance().isAutoInitEnabled = true
-        org.android.agoo.fcm.FCMRegister.register(context)
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastFcmAttempt < 60_000) return
+        lastFcmAttempt = now
+        try {
+            // Missing private resources (CI/debug) and devices without Play services retain U-Push.
+            if (com.google.firebase.FirebaseApp.getApps(context).none { it.name == com.google.firebase.FirebaseApp.DEFAULT_APP_NAME }
+                && com.google.firebase.FirebaseApp.initializeApp(context) == null) {
+                registrationState.update { it.copy(fcm = "此安装包未配置 Firebase") }
+                return
+            }
+            if (com.google.android.gms.common.GoogleApiAvailabilityLight.getInstance()
+                    .isGooglePlayServicesAvailable(context) != com.google.android.gms.common.ConnectionResult.SUCCESS) {
+                registrationState.update { it.copy(fcm = "Google Play 服务不可用，FCM 暂不可用") }
+                return
+            }
+            registrationState.update { it.copy(fcm = "正在检查 FCM 注册…") }
+            val messaging = com.google.firebase.messaging.FirebaseMessaging.getInstance()
+            messaging.isAutoInitEnabled = true
+            org.android.agoo.fcm.FCMRegister.register(context)
+            messaging.token.addOnCompleteListener { task ->
+                NotificationStore(context).use { if (it.get("consent") != "yes") return@addOnCompleteListener }
+                registrationState.update { it.copy(fcm = if (task.isSuccessful && !task.result.isNullOrBlank())
+                    "已取得 FCM 令牌，离线送达待验证" else "FCM 注册失败，请检查 Google 服务连接") }
+            }
+        } catch (_: Exception) {
+            registrationState.update { it.copy(fcm = "FCM 初始化失败，稍后自动重试") }
+        }
+    }
+
+    /** U-Push reports the Huawei token to its own service through this vendor adapter. */
+    @Synchronized private fun registerHuawei(context: Context) {
+        if (!com.umeng.commonsdk.utils.UMUtils.isMainProgress(context)) return
+        NotificationStore(context).use { if (it.get("consent") != "yes") return }
+        if (BuildConfig.HUAWEI_APP_ID.isBlank()) {
+            registrationState.update { it.copy(huawei = "此安装包未配置华为 App ID") }
+            return
+        }
+        if (!Build.MANUFACTURER.equals("HUAWEI", ignoreCase = true)) {
+            registrationState.update { it.copy(huawei = "当前不是华为设备，通道不适用") }
+            return
+        }
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastHuaweiAttempt < 600_000) return
+        lastHuaweiAttempt = now
+        registrationState.update { it.copy(huawei = "正在注册华为通道…") }
+        try {
+            org.android.agoo.huawei.HuaWeiRegister.register(context.applicationContext)
+            registrationState.update { it.copy(huawei = "已请求华为注册；请用华为设备验证离线送达") }
+        } catch (_: Exception) {
+            registrationState.update { it.copy(huawei = "华为通道注册失败，请检查 HMS 与 App ID") }
+        }
     }
 
     @Synchronized fun pauseFcm(context: Context) {

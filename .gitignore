@@ -13,6 +13,7 @@ gradle/gradle-daemon-jvm.properties
 .idea/
 *.iml
 local.properties
+push.local.properties
 captures/
 
 # 原生构建产物

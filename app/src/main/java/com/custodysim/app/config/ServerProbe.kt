@@ -28,7 +28,7 @@ object ServerProbe {
                 val result = runCatching {
                     response.use {
                         check(it.isSuccessful) { "检测失败（HTTP ${it.code}），请确认服务端已升级并使用最终 HTTPS 地址" }
-                        val source = it.body?.source() ?: error("服务端返回空内容")
+                        val source = it.body.source()
                         check(!source.request(16_385)) { "检测响应过大，无法识别该服务器" }
                         val root = JSONObject(source.readUtf8())
                         val data = root.optJSONObject("data") ?: error("不是兼容的 CustodySim 服务")

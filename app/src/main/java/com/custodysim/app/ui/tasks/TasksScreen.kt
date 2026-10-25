@@ -1,7 +1,13 @@
 package com.custodysim.app.ui.tasks
 
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.animateIntOffsetAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -9,20 +15,25 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import com.custodysim.app.R
@@ -34,6 +45,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.rememberCoroutineScope
@@ -269,28 +281,20 @@ fun TasksScreen(container: AppContainer, scrollBehavior: ScrollBehavior, allowSu
     }
 }
 
-/** Native Miuix tabs own selection, motion, scrolling and accessibility semantics. */
+/** 分类切换：与通知筛选共用同一套分段控件（滑块按文字长度居中并带补间动画）。 */
 @Composable
 private fun CategoryTabs(selected: TaskCategory, counts: TaskCounts?, onSelect: (TaskCategory) -> Unit) {
     val tabs = TaskCategory.entries.map { item ->
         val label = stringResource(CATEGORY_LABELS.getValue(item))
-        counts?.let { "$label · ${it.of(item)}" } ?: label
+        label
     }
-    val scheme = MiuixTheme.colorScheme
-    // Three fixed slots share the available width; the track has no scroll state.
-    Row(Modifier.padding(horizontal = AppSpace.page).padding(bottom = AppSpace.medium)
-        .fillMaxWidth().clip(RoundedCornerShape(AppShape.group)).background(scheme.primary.copy(alpha = 0.04f))
-        .padding(4.dp).selectableGroup()) {
-        TaskCategory.entries.forEachIndexed { index, item ->
-            Box(Modifier.weight(1f).clip(RoundedCornerShape(AppShape.group))
-                .background(if(item == selected) scheme.primary.copy(alpha = 0.13f) else androidx.compose.ui.graphics.Color.Transparent)
-                .selectable(selected = item == selected, role = Role.Tab, onClick = { onSelect(item) })
-                .padding(horizontal = 4.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
-                Text(tabs[index], style = MiuixTheme.textStyles.body2, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    color = if(item == selected) scheme.primary else scheme.onSurfaceVariantSummary)
-            }
-        }
-    }
+    SegmentedTabs(
+        labels = tabs,
+        selectedIndex = TaskCategory.entries.indexOf(selected).coerceAtLeast(0),
+        onSelect = { onSelect(TaskCategory.entries[it]) },
+        modifier = Modifier.padding(bottom = AppSpace.medium),
+        badges = TaskCategory.entries.map { item -> counts?.of(item)?.toString() },
+    )
 }
 
 /** 分组列表中的一个任务行；待提交 / 被退回的行整行可点。 */
@@ -304,7 +308,7 @@ private fun TaskRow(task: ReportTask, allowSubmission: Boolean, onEdit: () -> Un
             .padding(AppSpace.inset),
         verticalArrangement = Arrangement.spacedBy(AppSpace.small),
     ) {
-        RecordContent(actionLabel = if (actionable) stringResource(R.string.task_fill) else null, onAction = onEdit) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AppSpace.small)) {
             StatusChip(STATUS_LABEL[task.status]?.let { stringResource(it) } ?: task.status, statusColor(task.status))
             Column {
                 Text(task.title, style = MiuixTheme.textStyles.body1)
@@ -313,12 +317,16 @@ private fun TaskRow(task: ReportTask, allowSubmission: Boolean, onEdit: () -> Un
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                 }
                 if (task.readingMinutes > 0) Text("任务期间已阅读 ${task.readingSeconds / 60} / ${task.readingMinutes} 分钟${if (task.automaticReading) " · 达标自动通过" else ""}", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     stringResource(R.string.deadline, formatDateTime(task.deadline)),
                     style = MiuixTheme.textStyles.footnote1,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.weight(1f),
                 )
+                if (actionable) TextButton(stringResource(R.string.task_fill), onClick = onEdit,
+                    colors = ButtonDefaults.textButtonColorsPrimary(), modifier = Modifier.heightIn(min = 48.dp))
+                }
                 if (task.status == "RETURNED" && task.reviewComment != null) {
                     Text(
                         stringResource(R.string.review_returned, task.reviewComment),

@@ -61,7 +61,7 @@ internal fun CommunityFeedContent(
     SideEffect { if (posts.isNotEmpty()) previousPosts = posts }
     Column(modifier.fillMaxSize()) {
         CommunityPrivacyNote("在这里分享日常，用匿名身份交流",
-            Modifier.padding(horizontal = AppSpace.inset, vertical = AppSpace.small))
+            Modifier.padding(horizontal = AppSpace.inset, vertical = 2.dp))
         CommunityReadStatus(loading && posts.isNotEmpty(), error.takeIf { posts.isNotEmpty() }, onRetry)
         AnimatedContent(
             targetState = posts.isNotEmpty(), modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -76,7 +76,8 @@ internal fun CommunityFeedContent(
                         title = when { loading -> "正在加载社区"; error != null -> "暂时无法连接社区"; else -> "聊聊你的日常" },
                         description = when { loading -> "稍等片刻，看看大家的新分享"; error != null -> error; else -> "这里还很安静，写下第一篇分享吧" },
                         loading = loading, action = if (error != null) "重试" else "发布第一篇", onAction = if (error != null) onRetry else onCompose,
-                        modifier = Modifier.fillMaxWidth().padding(top = 64.dp, bottom = 40.dp),
+                        // 空态靠上：原来 64dp 顶部留白把内容压到屏幕中段，看着空。
+                        modifier = Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 32.dp),
                     )
                 }
             } else {
