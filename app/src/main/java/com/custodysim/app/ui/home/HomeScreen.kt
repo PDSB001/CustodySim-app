@@ -47,7 +47,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun HomeScreen(container: AppContainer, session: SessionUser, scrollBehavior: ScrollBehavior,
-    active: Boolean, onNavigate: (MainTab) -> Unit, onNotices: () -> Unit) {
+    active: Boolean, onNavigate: (MainTab) -> Unit, onNotices: () -> Unit, onScores: () -> Unit) {
     val context = LocalContext.current
     val resources = LocalResources.current
     val scope = rememberCoroutineScope()
@@ -173,8 +173,7 @@ fun HomeScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
             val locationOverview = if (session.isSupervised) LocationOverview(
                 status = stringResource(if (hasForeground) R.string.location_ready
                     else R.string.location_needs_permission),
-                hint = stringResource(if (hasForeground) R.string.location_ready_hint
-                    else R.string.location_permission_hint),
+                hint = stringResource(if(hasForeground) R.string.location_ready_hint else R.string.location_permission_hint),
             ) else null
             // 卡片、页点、上报按钮是一组：放在同一个 item 内自己控间距，
             // 否则会被列表统一的 16dp 间距把按钮推远。
@@ -196,6 +195,9 @@ fun HomeScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
                         }
                     })
             }
+        }
+        item(key = "scoreboard") {
+            SettingGroup { ArrowPreference(title = "考核计分板", summary = "查看周积分、排名与计分依据", onClick = onScores) }
         }
         if (session.isSupervised) {
             item {

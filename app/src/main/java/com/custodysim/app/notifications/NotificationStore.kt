@@ -16,6 +16,12 @@ class NotificationStore(context: Context) : SQLiteOpenHelper(context, "notificat
     fun get(key: String): String? = readableDatabase.rawQuery("SELECT value FROM settings WHERE key=?", arrayOf(key)).use { if (it.moveToFirst()) it.getString(0) else null }
     fun put(key: String, value: String) { writableDatabase.execSQL("INSERT OR REPLACE INTO settings VALUES (?,?)", arrayOf(key,value)) }
     fun clearBinding() { put("binding", "") }
+    fun setConversationMuted(userId: String, conversationId: String, muted: Boolean) {
+        val binding = runCatching { JSONObject(get("binding").orEmpty()) }.getOrNull() ?: return
+        if (binding.optString("userId") != userId) return
+        put("muted:${binding.optString("deviceId")}:$userId:$conversationId", if (muted) "yes" else "no")
+    }
+    fun conversationMuted(payload: JSONObject): Boolean = get("muted:${payload.optString("deviceId")}:${payload.optString("userId")}:${payload.optString("conversationId")}") == "yes"
     fun accepts(payload: JSONObject): Boolean {
         if (get("consent") != "yes") return false
         val binding = runCatching { JSONObject(get("binding").orEmpty()) }.getOrNull() ?: return false

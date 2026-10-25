@@ -60,6 +60,7 @@ class AppContainer(context: Context, val endpoint: com.custodysim.app.config.Ser
     val chatRealtimeClient by lazy { ChatRealtimeClient(chatRepository::realtimeToken, endpoint.realtimeUrl) }
 
     val taskRepository by lazy { TaskRepository(apiClient) }
+    val scoreRepository by lazy { com.custodysim.app.data.scores.ScoreRepository(apiClient) }
 
     private val notificationDelegate = lazy { com.custodysim.app.notifications.NotificationCoordinator(appContext, apiClient, endpoint.namespace, endpoint.realtimeUrl) }
     val notifications by notificationDelegate

@@ -29,7 +29,7 @@ class CommunityRepository(private val api: ApiClient) {
             (0 until images.length()).map { images.getString(it) },
             (0 until fields.length()).map { fields.getJSONObject(it).let { f -> CommunityField(f.getString("name"), f.getString("value")) } })
     }
-    suspend fun feed(page: Int): ApiResult<CommunityFeed> = when (val result = api.get("/api/community/posts?page=$page")) {
+    suspend fun feed(page: Int, mine: Boolean = false): ApiResult<CommunityFeed> = when (val result = api.get("/api/community/posts?page=$page&mine=$mine")) {
         is ApiResult.Err -> result
         is ApiResult.Ok -> {
             val items = result.data.getJSONArray("posts")
@@ -51,5 +51,7 @@ class CommunityRepository(private val api: ApiClient) {
         api.post("/api/community/posts", JSONObject().put("title", title).put("content", content).put("images", JSONArray(images)), onProgress)
     suspend fun comment(id: String, content: String): ApiResult<JSONObject> =
         api.post("/api/community/posts/$id/comments", JSONObject().put("content", content))
+    suspend fun markCommentsRead(id: String, commentIds: List<String>): ApiResult<JSONObject> =
+        api.post("/api/community/posts/$id/read", JSONObject().put("commentIds", JSONArray(commentIds)))
     suspend fun remove(type: String, id: String): ApiResult<JSONObject> = api.delete("/api/community/$type/$id")
 }

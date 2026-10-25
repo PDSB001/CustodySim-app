@@ -54,6 +54,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -236,6 +237,8 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
     onConversationChanged: (String?) -> Unit, backRequest: Int, refreshRequest: Int,
     conversationLayoutReady: Boolean, openConversation: String? = null, openRequest: Int = 0) {
     var conversations by remember { mutableStateOf<List<ChatConversation>>(emptyList()) }
+    val notificationContext = LocalContext.current
+    var savingMute by remember { mutableStateOf(false) }
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(openRequest) { if (openRequest > 0 && !openConversation.isNullOrBlank()) selectedId = openConversation }
     var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
@@ -343,6 +346,9 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
             when (val result = container.chatRepository.conversations()) {
                 is ApiResult.Ok -> {
                     conversations = result.data
+                    com.custodysim.app.notifications.NotificationStore(notificationContext).use { store ->
+                        result.data.forEach { store.setConversationMuted(session.id, it.id, it.muted) }
+                    }
                 }
                 is ApiResult.Err -> error = result.message
             }
@@ -504,6 +510,7 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
                                 }
                             },
                             endActions = {
+                                if (conversation.muted) Text("免打扰", style = MiuixTheme.textStyles.footnote1)
                                 if (conversation.unreadCount > 0) StatusChip(
                                     conversation.unreadCount.toString(), MiuixTheme.colorScheme.primary)
                                 else Icon(MiuixIcons.Basic.ArrowRight, contentDescription = null)
@@ -530,6 +537,25 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
     } else {
         Column(Modifier.fillMaxSize().imePadding().navigationBarsPadding()) {
             error?.let { NoticeBanner(it, error = true) }
+            Row(Modifier.fillMaxWidth().padding(horizontal = AppSpace.page), horizontalArrangement = Arrangement.End) {
+                TextButton(text = if (selected?.muted == true) "消息免打扰：已开启" else "消息免打扰：已关闭", enabled = selected != null && !savingMute, onClick = {
+                    val conversation = selected ?: return@TextButton
+                    savingMute = true
+                    scope.launch {
+                        try {
+                            when (val result = container.chatRepository.setMuted(conversation.id, !conversation.muted)) {
+                                is ApiResult.Err -> snackbar(result.message)
+                                is ApiResult.Ok -> {
+                                    val muted = result.data.optBoolean("muted")
+                                    conversations = conversations.map { if (it.id == conversation.id) it.copy(muted = muted) else it }
+                                    com.custodysim.app.notifications.NotificationStore(notificationContext).use { it.setConversationMuted(session.id, conversation.id, muted) }
+                                    if (muted) com.custodysim.app.notifications.AppNotifications.cancelConversation(notificationContext, conversation.id)
+                                }
+                            }
+                        } finally { savingMute = false }
+                    }
+                })
+            }
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val bubbleMaxWidth = maxWidth * 0.78f
             LazyColumn(state = messageListState,

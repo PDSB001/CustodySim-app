@@ -4,6 +4,8 @@ import android.content.Context
 import com.custodysim.app.data.net.ApiClient
 import com.custodysim.app.data.net.ApiResult
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -18,6 +20,21 @@ class NotificationCoordinator(private val context: Context, private val api: Api
     @Volatile private var closed = false
     @Volatile private var sessionActive = false
     private val generation = java.util.concurrent.atomic.AtomicLong()
+    private val registrationMutex = Mutex()
+    private fun registration(): JSONObject = credentials().put("enabled",true)
+        .put("providerToken",store.get("providerToken") ?: JSONObject.NULL)
+        .put("noticesEnabled",store.get("noticesEnabled") != "no")
+        .put("tasksEnabled",store.get("tasksEnabled") != "no")
+        .put("chatEnabled",store.get("chatEnabled") != "no")
+        .put("communityEnabled",store.get("communityEnabled") != "no")
+        .put("checkinRemindersEnabled",store.get("checkinRemindersEnabled") == "yes")
+    suspend fun syncPreferences(): Boolean {
+        if (closed || !sessionActive || store.get("consent") != "yes") return false
+        return registrationMutex.withLock {
+            if (closed || !sessionActive || store.get("consent") != "yes") return@withLock false
+            api.post("/api/mobile/push/devices",registration()) is ApiResult.Ok
+        }
+    }
     private fun credentials(): JSONObject {
         synchronized(NotificationCoordinator::class.java) {
             val key = "installation:$namespace"
@@ -36,8 +53,12 @@ class NotificationCoordinator(private val context: Context, private val api: Api
                 if (store.get("consent") != "yes" || !AppNotifications.permitted(context)) { socket?.cancel(); delay(2000); continue }
                 AppNotifications.initialize(context)
                 val epoch = generation.get()
-                val input = credentials().put("enabled",true).put("providerToken",store.get("providerToken") ?: JSONObject.NULL)
-                val registered = api.post("/api/mobile/push/devices",input)
+                val request = registrationMutex.withLock {
+                    if (epoch != generation.get() || !sessionActive || closed || store.get("consent") != "yes") return@withLock null
+                    val input = registration()
+                    input to api.post("/api/mobile/push/devices",input)
+                } ?: continue
+                val (input, registered) = request
                 if (registered !is ApiResult.Ok) { delay(15_000); continue }
                 val device = registered.data
                 synchronized(this@NotificationCoordinator) {
@@ -76,7 +97,7 @@ class NotificationCoordinator(private val context: Context, private val api: Api
                         val tokenWatcher = launch {
                             while (isActive) {
                                 delay(2000)
-                                if (store.get("providerToken") != input.optString("providerToken").takeIf { it != "null" }) { done.complete(Unit); break }
+                                if (registration().toString() != input.toString()) { done.complete(Unit); break }
                             }
                         }
                         try { withTimeoutOrNull(240_000) { done.await() } } finally { tokenWatcher.cancel() }
@@ -92,13 +113,14 @@ class NotificationCoordinator(private val context: Context, private val api: Api
         if (stopSession) sessionActive = false
         store.clearBinding(); socket?.cancel(); AppNotifications.cancel(context)
         AppNotifications.pendingRoute.value = null
+        AppNotifications.communityUpdate.value = null
     }
     suspend fun unregister(stopSession: Boolean = true) {
         if (!stopSession) AppNotifications.pauseFcm(context)
         val wasBound = !store.get("binding").isNullOrBlank()
         clearLocal(stopSession)
         if (!wasBound) return
-        withContext(NonCancellable + Dispatchers.IO) { withTimeoutOrNull(5000) { api.post("/api/mobile/push/devices",credentials().put("enabled",false)) } }
+        withContext(NonCancellable + Dispatchers.IO) { withTimeoutOrNull(5000) { registrationMutex.withLock { api.post("/api/mobile/push/devices",credentials().put("enabled",false)) } } }
     }
     fun dispose() { closed = true; clearLocal(); client.dispatcher.cancelAll(); client.connectionPool.evictAll(); store.close() }
 }

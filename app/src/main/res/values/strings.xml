@@ -150,8 +150,8 @@
     <string name="location">位置上报</string>
     <string name="location_ready">定位已授权</string>
     <string name="location_needs_permission">等待定位授权</string>
-    <string name="location_ready_hint">可主动获取当前位置并上报</string>
-    <string name="location_permission_hint">授权后可获取当前位置并完成上报</string>
+    <string name="location_ready_hint">可手动或自动上报</string>
+    <string name="location_permission_hint">点击下方按钮授权</string>
     <string name="location_queue">等待上报</string>
     <string name="location_queue_count">%1$d 个位置点</string>
     <string name="location_retry_pending">重试待上传</string>

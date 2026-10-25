@@ -31,6 +31,12 @@ fun NoticeSheet(container: AppContainer, show: Boolean, onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
     val snackbar = LocalAppSnackbar.current
     var enabled by remember { mutableStateOf(NotificationStore(context).use { it.get("consent") == "yes" }) }
+    var noticesEnabled by remember { mutableStateOf(NotificationStore(context).use { it.get("noticesEnabled") != "no" }) }
+    var tasksEnabled by remember { mutableStateOf(NotificationStore(context).use { it.get("tasksEnabled") != "no" }) }
+    var chatEnabled by remember { mutableStateOf(NotificationStore(context).use { it.get("chatEnabled") != "no" }) }
+    var communityEnabled by remember { mutableStateOf(NotificationStore(context).use { it.get("communityEnabled") != "no" }) }
+    var showNotificationSettings by remember { mutableStateOf(false) }
+    var checkinRemindersEnabled by remember { mutableStateOf(NotificationStore(context).use { it.get("checkinRemindersEnabled") == "yes" }) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) AppNotifications.initialize(context) else snackbar("系统通知权限未开启，可在设置中开启")
     }
@@ -80,7 +86,43 @@ fun NoticeSheet(container: AppContainer, show: Boolean, onDismiss: () -> Unit) {
                     else AppNotifications.initialize(context)
                 } else scope.launch { container.notifications.unregister(stopSession=false) }
             })
-            if(!enabled) Text("开启后使用友盟接收离线消息；聊天通知仅显示发送者和新消息提示。",style=MiuixTheme.textStyles.footnote1)
+            if(!enabled) Text("开启后使用友盟接收离线聊天、站内信、任务、打卡和社区回复提醒；聊天通知仅显示发送者和新消息提示。",style=MiuixTheme.textStyles.footnote1)
+            if(enabled) TextButton(text=if(showNotificationSettings) "收起通知设置" else "通知分类与免打扰",onClick={showNotificationSettings=!showNotificationSettings})
+            if(enabled && showNotificationSettings) {
+                TextButton(text=if(communityEnabled) "社区回复通知：已开启" else "社区回复通知：已关闭",onClick={
+                    communityEnabled=!communityEnabled
+                    NotificationStore(context).use { it.put("communityEnabled",if(communityEnabled) "yes" else "no") }
+                    if(!communityEnabled) AppNotifications.cancelCategory(context,"community_replies")
+                    scope.launch { if(!container.notifications.syncPreferences()) snackbar("设置已保存在本机，联网后同步") }
+                })
+                Row {
+                    TextButton(text=if(tasksEnabled) "任务提醒：已开启" else "任务提醒：已关闭",onClick={
+                        tasksEnabled=!tasksEnabled
+                        NotificationStore(context).use { it.put("tasksEnabled",if(tasksEnabled) "yes" else "no") }
+                        if(!tasksEnabled) AppNotifications.cancelCategory(context,"task_reminders")
+                        scope.launch { if(!container.notifications.syncPreferences()) snackbar("设置已保存在本机，联网后同步") }
+                    })
+                    TextButton(text=if(chatEnabled) "聊天免打扰：已关闭" else "聊天免打扰：已开启",onClick={
+                        chatEnabled=!chatEnabled
+                        NotificationStore(context).use { it.put("chatEnabled",if(chatEnabled) "yes" else "no") }
+                        if(!chatEnabled) AppNotifications.cancelCategory(context,"chat_messages")
+                        scope.launch { if(!container.notifications.syncPreferences()) snackbar("设置已保存在本机，联网后同步") }
+                    })
+                }
+                TextButton(text=if(noticesEnabled) "站内信推送：已开启" else "站内信推送：已关闭",onClick={
+                    noticesEnabled=!noticesEnabled
+                    NotificationStore(context).use { it.put("noticesEnabled",if(noticesEnabled) "yes" else "no") }
+                    if(!noticesEnabled) { AppNotifications.cancelCategory(context,"system_notices"); AppNotifications.cancelCategory(context,"account_reminders") }
+                    scope.launch { if(!container.notifications.syncPreferences()) snackbar("设置已保存在本机，联网后同步") }
+                })
+                TextButton(text=if(checkinRemindersEnabled) "打卡提醒：已开启" else "打卡提醒：已关闭",onClick={
+                    checkinRemindersEnabled=!checkinRemindersEnabled
+                    NotificationStore(context).use { it.put("checkinRemindersEnabled",if(checkinRemindersEnabled) "yes" else "no") }
+                    if(!checkinRemindersEnabled) AppNotifications.cancelCategory(context,"checkin_reminders")
+                    scope.launch { if(!container.notifications.syncPreferences()) snackbar("设置已保存在本机，联网后同步") }
+                })
+                Text("打卡开始时提醒一次，较长时段在截止前 10 分钟再提醒；已完成或过期不再发送。提醒由服务器定期检查，可能延迟数分钟。",style=MiuixTheme.textStyles.footnote1)
+            }
             FramedTextField(keyword,{keyword=it.take(100)},label="搜索通知",singleLine=true,modifier=Modifier.fillMaxWidth())
             Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                 listOf("全部","未读","重要").forEachIndexed { index,label -> TextButton(text=if(filter==index) "✓ $label" else label,onClick={filter=index}) }

@@ -15,6 +15,7 @@ data class ChatConversation(
     val lastMessage: String?,
     val unreadCount: Int,
     val memberAvatars: Map<String, String?> = emptyMap(),
+    val muted: Boolean = false,
 )
 data class ChatMessage(
     val id: String,
@@ -103,7 +104,7 @@ class ChatRepository(private val api: ApiClient) {
                 val member = values.getJSONObject(it)
                 member.optString("id") to member.optString("avatar").takeIf { value -> value.isNotBlank() && value != "null" }
             } } ?: emptyMap()
-            ChatConversation(item.optString("id"), item.optString("type"), item.optString("title"), members, item.optJSONObject("lastMessage")?.optString("content"), item.optInt("unreadCount"), avatars)
+            ChatConversation(item.optString("id"), item.optString("type"), item.optString("title"), members, item.optJSONObject("lastMessage")?.optString("content"), item.optInt("unreadCount"), avatars, item.optBoolean("muted"))
         })
     }
 
@@ -149,6 +150,8 @@ class ChatRepository(private val api: ApiClient) {
 
     suspend fun markRead(conversationId: String, messageId: String): ApiResult<JSONObject> =
         api.post(AppConfig.pathChatRead(conversationId), JSONObject().put("messageId", messageId))
+    suspend fun setMuted(conversationId: String, muted: Boolean): ApiResult<JSONObject> =
+        api.post("/api/chat/conversations/$conversationId/notifications", JSONObject().put("muted",muted))
 
     suspend fun candidates(): ApiResult<List<ChatCandidate>> = when (val result = api.getArray(AppConfig.PATH_CHAT_CANDIDATES)) {
         is ApiResult.Err -> result

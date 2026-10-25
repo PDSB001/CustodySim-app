@@ -1,6 +1,15 @@
 package com.custodysim.app.ui.tasks
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,7 +31,6 @@ import com.custodysim.app.ui.theme.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +59,6 @@ import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.preference.OverlaySpinnerPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -201,6 +208,7 @@ fun TasksScreen(container: AppContainer, scrollBehavior: ScrollBehavior, allowSu
 
     LazyColumn(
         state = listState,
+        userScrollEnabled = !loading || tasks.isNotEmpty(),
         modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
         contentPadding = glassPagePadding(),
     ) {
@@ -264,20 +272,24 @@ fun TasksScreen(container: AppContainer, scrollBehavior: ScrollBehavior, allowSu
 /** Native Miuix tabs own selection, motion, scrolling and accessibility semantics. */
 @Composable
 private fun CategoryTabs(selected: TaskCategory, counts: TaskCounts?, onSelect: (TaskCategory) -> Unit) {
-    val reduceMotion = LocalEffects.current.reduceMotion
     val tabs = TaskCategory.entries.map { item ->
         val label = stringResource(CATEGORY_LABELS.getValue(item))
         counts?.let { "$label · ${it.of(item)}" } ?: label
     }
-    // A fresh native tab row snaps to its initial selection when motion is disabled.
-    key(if (reduceMotion) selected else "task-tabs") {
-        TabRowWithContour(
-            tabs = tabs,
-            selectedTabIndex = TaskCategory.entries.indexOf(selected),
-            onTabSelected = { onSelect(TaskCategory.entries[it]) },
-            minWidth = 112.dp,
-            modifier = Modifier.padding(bottom = AppSpace.medium),
-        )
+    val scheme = MiuixTheme.colorScheme
+    // Three fixed slots share the available width; the track has no scroll state.
+    Row(Modifier.padding(horizontal = AppSpace.page).padding(bottom = AppSpace.medium)
+        .fillMaxWidth().clip(RoundedCornerShape(AppShape.group)).background(scheme.primary.copy(alpha = 0.04f))
+        .padding(4.dp).selectableGroup()) {
+        TaskCategory.entries.forEachIndexed { index, item ->
+            Box(Modifier.weight(1f).clip(RoundedCornerShape(AppShape.group))
+                .background(if(item == selected) scheme.primary.copy(alpha = 0.13f) else androidx.compose.ui.graphics.Color.Transparent)
+                .selectable(selected = item == selected, role = Role.Tab, onClick = { onSelect(item) })
+                .padding(horizontal = 4.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
+                Text(tabs[index], style = MiuixTheme.textStyles.body2, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    color = if(item == selected) scheme.primary else scheme.onSurfaceVariantSummary)
+            }
+        }
     }
 }
 

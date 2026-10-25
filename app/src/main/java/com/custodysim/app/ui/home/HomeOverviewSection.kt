@@ -112,7 +112,7 @@ private fun overviewBlocks(
         add(OverviewBlock(
             label = "待完成任务",
             value = tasks?.let { "${it.pending}" } ?: UNKNOWN_VALUE,
-            detail = tasks?.let { "${it.pending} 项待执行 · ${it.review} 项待批阅" } ?: UNREAD_HINT,
+            detail = tasks?.let { "待批阅 ${it.review}" } ?: UNREAD_HINT,
             icon = MiuixIcons.Notes,
             tone = when {
                 tasks == null -> palette.muted
@@ -143,7 +143,7 @@ private fun overviewBlocks(
         detail = when {
             unread == null -> UNREAD_HINT
             unread == 0 -> "暂无未读公告"
-            else -> "$unread 条公告尚未阅读"
+            else -> "点击查看未读"
         },
         icon = MiuixIcons.Promotions,
         tone = when {
@@ -155,7 +155,7 @@ private fun overviewBlocks(
     ))
 }
 
-/** 定位概览与指标块同结构，因此同高：小标签 + 状态 + 两行说明位。 */
+/** 定位概览与指标块同结构：小标签、状态与单行摘要。 */
 private fun locationBlock(location: LocationOverview, palette: OverviewPalette) = OverviewBlock(
     label = "位置上报",
     value = location.status,
@@ -250,7 +250,7 @@ private fun OverviewCard(blocks: List<OverviewBlock>, modifier: Modifier = Modif
     Card(
         modifier = modifier.fillMaxWidth(),
         cornerRadius = AppShape.group,
-        insideMargin = PaddingValues(AppSpace.inset),
+        insideMargin = PaddingValues(horizontal = AppSpace.inset, vertical = 12.dp),
         colors = CardDefaults.defaultColors(
             color = MiuixTheme.colorScheme.primary.copy(alpha = 0.10f)),
     ) {
@@ -285,10 +285,10 @@ private fun MetricBlock(block: OverviewBlock, modifier: Modifier = Modifier) {
                 overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.height(AppSpace.tiny))
-        // 固定两行说明位：同卡两块、以及左右各页的文案长短不一，卡片高度都不会跟着跳。
+        // 一行补充信息即可；主值已说明的数量不再重复，也不预留空白行。
         Text(block.detail, style = MiuixTheme.textStyles.footnote2,
             color = scheme.onSurfaceVariantSummary,
-            minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

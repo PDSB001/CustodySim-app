@@ -24,6 +24,10 @@ AppConfig 添加原生头；ApiClient 统一请求和认证；TokenStore 使用�
 
 ## 功能入口
 
+- 考核计分板：首页与“我的”均可进入，支持周次、排名、来源分项、获准查看的积分流水及监管账号人工调整。直接使用 `/api/scores` 的姓名脱敏和明细权限，不自行放宽。规则展示读取响应 `policy`，与服务端实际计分和图书馆阅读设置同源；旧服务端未返回规则时展示暂不可用，不编造分值。
+- 任务分类使用固定等宽三栏，底轨不横向滚动；首次加载空列表时禁止拖动占位内容。首页概览使用单行摘要，避免为说明文案保留两行空白。
+- “我的 → 版权、开源许可与源码”按项目归属、分发许可、源码和第三方组件展示，许可证原文独立阅读并可选择复制。完整原文仍随安装包提供。
+
 - [AppConfig](../app/src/main/java/com/custodysim/app/config/AppConfig.kt)：协议头和路径常量。
 - [ApiClient](../app/src/main/java/com/custodysim/app/data/net/ApiClient.kt)：认证、单飞刷新、取消与阅读传输。
 - [ServerSettings](../app/src/main/java/com/custodysim/app/config/ServerSettings.kt)：保存端点、旧会话绑定和显式选择优先。

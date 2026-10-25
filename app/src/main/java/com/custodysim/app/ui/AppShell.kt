@@ -82,22 +82,36 @@ fun AppShell(container: AppContainer, session: SessionUser, onLogout: () -> Unit
     }
     LaunchedEffect(visibleTabs) { if (tab !in visibleTabs) tab = MainTab.HOME }
     var showNotices by rememberSaveable { mutableStateOf(false) }
+    var showScores by rememberSaveable { mutableStateOf(false) }
+    var showCommunity by rememberSaveable { mutableStateOf(false) }
+    var showLibrary by rememberSaveable { mutableStateOf(false) }
+    var requestedCommunityPost by remember { mutableStateOf<String?>(null) }
+    var communityOpenRequest by remember { mutableIntStateOf(0) }
     val notificationRoute by com.custodysim.app.notifications.AppNotifications.pendingRoute.collectAsState()
     var requestedConversation by remember { mutableStateOf<String?>(null) }
     var notificationRequest by remember { mutableIntStateOf(0) }
     LaunchedEffect(notificationRoute) {
         val route = notificationRoute ?: return@LaunchedEffect
         if (route.optString("userId") == session.id) {
+            showNotices = false; showCommunity = false; showLibrary = false; showScores = false
             if (route.optString("kind") == "CHAT") {
                 requestedConversation = route.optString("conversationId")
                 notificationRequest++
                 tab = MainTab.CHAT
+            } else if (route.optString("kind") == "CHECKIN" && session.isSupervised) {
+                tab = MainTab.CHECKINS
+            } else if (route.optString("kind") == "TASK") {
+                tab = MainTab.TASKS
+            } else if (route.optString("kind") == "PROBATION") {
+                showScores = true
+            } else if (route.optString("kind") == "COMMUNITY") {
+                requestedCommunityPost = route.optString("postId").takeIf { it.isNotBlank() }
+                communityOpenRequest++
+                showCommunity = true
             } else showNotices = true
         }
         com.custodysim.app.notifications.AppNotifications.pendingRoute.value = null
     }
-    var showCommunity by rememberSaveable { mutableStateOf(false) }
-    var showLibrary by rememberSaveable { mutableStateOf(false) }
     var libraryRefreshRequest by remember { mutableIntStateOf(0) }
     var chatConversationTitle by remember { mutableStateOf<String?>(null) }
     var chatBackRequest by remember { mutableIntStateOf(0) }
@@ -246,8 +260,8 @@ fun AppShell(container: AppContainer, session: SessionUser, onLogout: () -> Unit
                         val scrollBehavior = tabScrollBehaviors[destination.ordinal]
                         when (destination) {
                             MainTab.HOME -> HomeScreen(container, session, scrollBehavior,
-                                active = tab == MainTab.HOME && !showCommunity && !showNotices && !showLibrary,
-                                onNavigate = { tab = it }, onNotices = { showNotices = true })
+                                active = tab == MainTab.HOME && !showCommunity && !showNotices && !showLibrary && !showScores,
+                                onNavigate = { tab = it }, onNotices = { showNotices = true }, onScores = { showScores = true })
                             MainTab.CHECKINS -> CheckinsScreen(container, scrollBehavior)
                             MainTab.TASKS -> TasksScreen(container, scrollBehavior, allowSubmission = session.isSupervised, refreshSignal = libraryRefreshRequest)
                             MainTab.APPLICATIONS -> ApplicationsScreen(container, scrollBehavior)
@@ -257,12 +271,13 @@ fun AppShell(container: AppContainer, session: SessionUser, onLogout: () -> Unit
                                 onConversationChanged = { chatConversationTitle = it },
                                 backRequest = chatBackRequest, refreshRequest = chatRefreshRequest)
                             MainTab.MINE -> MineScreen(container, session, onLogout, scrollBehavior, onServerSettings,
-                                onCommunity = { showCommunity = true })
+                                onCommunity = { showCommunity = true }, onScores = { showScores = true })
                         }
                     }
                     }
                 }
                 NoticeSheet(container, showNotices) { showNotices = false }
+                com.custodysim.app.ui.scores.ScoreboardSheet(container, session, showScores) { showScores = false }
             }
             }
         }
@@ -276,7 +291,7 @@ fun AppShell(container: AppContainer, session: SessionUser, onLogout: () -> Unit
         ) {
             Box(Modifier.fillMaxSize().background(MiuixTheme.colorScheme.surface)) {
                 Box(Modifier.matchParentSize().blockBackgroundTouches())
-                CommunityScreen(container, onClose = { showCommunity = false })
+                CommunityScreen(container, onClose = { showCommunity = false; requestedCommunityPost = null }, requestedPost = requestedCommunityPost, openRequest = communityOpenRequest)
             }
         }
         AnimatedVisibility(
@@ -316,7 +331,7 @@ fun roleLabel(role: String): String = when (role) {
 
 @Composable
 private fun MineScreen(container: AppContainer, session: SessionUser, onLogout: () -> Unit, scrollBehavior: ScrollBehavior, onServerSettings: () -> Unit,
-    onCommunity: () -> Unit) {
+    onCommunity: () -> Unit, onScores: () -> Unit) {
     val context = LocalContext.current
     val appearance = LocalAppearance.current
     val haptics = LocalHapticFeedback.current
@@ -425,8 +440,9 @@ private fun MineScreen(container: AppContainer, session: SessionUser, onLogout: 
                 SettingGroup {
                     ArrowPreference(title = "服务器设置", onClick = onServerSettings)
                     ArrowPreference(title = "匿名社区", summary = "分享日常与自愿公开的档案内容", onClick = onCommunity)
+                    ArrowPreference(title = "考核计分板", summary = "周积分、计分明细与执行记录", onClick = onScores)
                     InfoRow(stringResource(R.string.version), BuildConfig.VERSION_NAME)
-                    ArrowPreference(title = "开源许可与源码", summary = "Episteme 阅读核心 · AGPL-3.0", onClick = { showLicenses = true })
+                    ArrowPreference(title = "版权、开源许可与源码", summary = "项目归属 · 第三方致谢 · 完整许可证", onClick = { showLicenses = true })
                 }
             }
         }

@@ -14,6 +14,10 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.custodysim.app.AppContainer
 import com.custodysim.app.data.community.*
 import com.custodysim.app.data.net.ApiResult
@@ -22,6 +26,7 @@ import com.custodysim.app.ui.theme.AppSpace
 import com.custodysim.app.ui.theme.LocalEffects
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.awaitCancellation
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
@@ -31,7 +36,7 @@ import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
-fun CommunityScreen(container: AppContainer, onClose: () -> Unit) {
+fun CommunityScreen(container: AppContainer, onClose: () -> Unit, requestedPost: String? = null, openRequest: Int = 0) {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val notify: (String) -> Unit = remember(snackbar, scope) {
@@ -41,21 +46,33 @@ fun CommunityScreen(container: AppContainer, onClose: () -> Unit) {
         } }
     }
     CompositionLocalProvider(LocalAppSnackbar provides notify) {
-        CommunityWorkspace(container, onClose, snackbar)
+        CommunityWorkspace(container, onClose, snackbar, requestedPost, openRequest)
     }
 }
 
 @Composable
-private fun CommunityWorkspace(container: AppContainer, onClose: () -> Unit, snackbar: SnackbarHostState) {
+private fun CommunityWorkspace(container: AppContainer, onClose: () -> Unit, snackbar: SnackbarHostState, requestedPost: String?, openRequest: Int) {
     val scope = rememberCoroutineScope()
     val notify = LocalAppSnackbar.current
     val focus = LocalFocusManager.current
     val reduceMotion = LocalEffects.current.reduceMotion
     var posts by remember { mutableStateOf<List<CommunityPost>>(emptyList()) }
+    var mine by rememberSaveable { mutableStateOf(false) }
+    var notificationTargetPending by remember { mutableStateOf(false) }
     var page by rememberSaveable { mutableIntStateOf(0) }
     var requestedPage by remember { mutableIntStateOf(page) }
     var more by remember { mutableStateOf(false) }
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val notificationContext = LocalContext.current
+    LaunchedEffect(selected, lifecycleOwner) {
+        val id = selected ?: return@LaunchedEffect
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            com.custodysim.app.notifications.AppNotifications.visibleCommunityPost = id
+            com.custodysim.app.notifications.AppNotifications.cancelCommunityPost(notificationContext, id)
+            try { awaitCancellation() } finally { com.custodysim.app.notifications.AppNotifications.visibleCommunityPost = null }
+        }
+    }
     var composing by rememberSaveable { mutableStateOf(false) }
     var detail by remember { mutableStateOf<CommunityDetail?>(null) }
     var commentPage by rememberSaveable { mutableIntStateOf(0) }
@@ -67,6 +84,10 @@ private fun CommunityWorkspace(container: AppContainer, onClose: () -> Unit, sna
     var feedMutations by remember { mutableStateOf<Map<String, CommunityFeedMutation>>(emptyMap()) }
     var pendingFeedChanges by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var detailRevision by remember { mutableIntStateOf(0) }
+    val communityUpdate by com.custodysim.app.notifications.AppNotifications.communityUpdate.collectAsState()
+    LaunchedEffect(communityUpdate) {
+        if (selected != null && communityUpdate?.first == selected) detailRevision++
+    }
     var reloadAllPages by remember { mutableStateOf(true) }
     var feedLoading by remember { mutableStateOf(true) }
     var detailLoading by remember { mutableStateOf(selected != null) }
@@ -100,6 +121,11 @@ private fun CommunityWorkspace(container: AppContainer, onClose: () -> Unit, sna
     fun refreshFeed() {
         error = null; feedLoading = true; requestedPage = page; reloadAllPages = true; feedRevision++
     }
+    fun switchFeed() {
+        mine = !mine; posts = emptyList(); page = 0; requestedPage = 0
+        feedMutations = emptyMap(); pendingFeedChanges = emptyMap()
+        reloadAllPages = true; feedRevision++; feedState.requestScrollToItem(0)
+    }
     fun markFeedChange(id: String, post: CommunityPost? = null) {
         feedMutationRevision++
         pendingFeedChanges = pendingFeedChanges + (id to feedMutationRevision)
@@ -118,6 +144,7 @@ private fun CommunityWorkspace(container: AppContainer, onClose: () -> Unit, sna
                 // Back may cancel the detail read immediately after a successful write.
                 if (pendingFeedChanges.isNotEmpty()) refreshFeed()
             }
+            mine -> switchFeed()
             else -> onClose()
         }
     }
@@ -127,6 +154,9 @@ private fun CommunityWorkspace(container: AppContainer, onClose: () -> Unit, sna
         detailState.requestScrollToItem(0)
         detailLoading = true; detailError = null
         selected = id; composing = false
+    }
+    LaunchedEffect(openRequest) {
+        if (!requestedPost.isNullOrBlank()) { notificationTargetPending = true; openPost(requestedPost) }
     }
     fun showPreview(urls: List<String>, index: Int) {
         focus.clearFocus(); preview = urls; previewIndex = index; previewVisible = true
@@ -175,7 +205,7 @@ private fun CommunityWorkspace(container: AppContainer, onClose: () -> Unit, sna
 
     // Feed reads belong to the feed, so plain back never drops pages or refetches them.
     // Refresh all loaded pages atomically; a failed page leaves the old list intact.
-    LaunchedEffect(feedRevision) {
+    LaunchedEffect(feedRevision, mine) {
         feedLoading = true; feedError = null
         val targetPage = requestedPage
         val refreshAll = reloadAllPages
@@ -183,7 +213,7 @@ private fun CommunityWorkspace(container: AppContainer, onClose: () -> Unit, sna
         try {
             val refreshed = mutableListOf<CommunityPost>()
             for (nextPage in if (refreshAll) 0..targetPage else targetPage..targetPage) {
-                when (val result = container.communityRepository.feed(nextPage)) {
+                when (val result = container.communityRepository.feed(nextPage, mine)) {
                     is ApiResult.Ok -> {
                         coroutineContext.ensureActive()
                         refreshed += result.data.posts
@@ -211,11 +241,16 @@ private fun CommunityWorkspace(container: AppContainer, onClose: () -> Unit, sna
                         val lastPage = ((result.data.post.commentCount - 1).coerceAtLeast(0)) / 30
                         // Comments are chronological. After sending, find the new reply instead
                         // of returning to page one where it may not be visible.
-                        if (commentPage > lastPage || pendingCommentId != null && newReply < 0 && commentPage != lastPage) {
+                        if (notificationTargetPending && commentPage != lastPage || commentPage > lastPage || pendingCommentId != null && newReply < 0 && commentPage != lastPage) {
                             commentPage = lastPage
                         } else {
+                            notificationTargetPending = false
                             val changedPage = displayedCommentPage != commentPage
                             detail = result.data
+                            if (result.data.post.isOwn && result.data.comments.isNotEmpty()) {
+                                val readIds = result.data.comments.map { it.id }
+                                scope.launch { container.communityRepository.markCommentsRead(id, readIds) }
+                            }
                             posts = if (posts.any { it.id == id }) posts.map { if (it.id == id) result.data.post else it }
                                 else listOf(result.data.post) + posts
                             if (id in pendingFeedChanges) {
@@ -281,9 +316,10 @@ private fun CommunityWorkspace(container: AppContainer, onClose: () -> Unit, sna
             snackbarHost = { if (active) SnackbarHost(snackbar, Modifier.imePadding()) },
             topBar = {
                 if (kind == "feed") TopAppBar(
-                    title = "匿名社区", scrollBehavior = scrollBehavior,
+                    title = if (mine) "我的帖子" else "匿名社区", scrollBehavior = scrollBehavior,
                     navigationIcon = { CommunityBackButton(!active, ::back) },
                     actions = {
+                        TextButton(text = if (mine) "全部帖子" else "我的帖子", enabled = active && !busy, onClick = ::switchFeed)
                         CommunityRefreshButton(feedLoading, active && !feedLoading, ::refreshFeed)
                         CommunityActionIconButton(onClick = { error = null; editorState.requestScrollToItem(0); composing = true }, enabled = active,
                             backgroundColor = MiuixTheme.colorScheme.primary.copy(alpha = 0.10f)) {
