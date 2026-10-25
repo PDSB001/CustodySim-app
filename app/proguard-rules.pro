@@ -32,3 +32,6 @@
 # This app uses the JDK engine; see https://github.com/jhy/jsoup/issues/2459.
 -dontwarn com.google.re2j.Matcher
 -dontwarn com.google.re2j.Pattern
+
+# U-Push FCM adapter is discovered by the provider SDK.
+-keep class org.android.agoo.fcm.** { *; }

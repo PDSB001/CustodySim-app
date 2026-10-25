@@ -234,9 +234,10 @@ private fun ChatBubble(
 @Composable
 fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: ScrollBehavior,
     onConversationChanged: (String?) -> Unit, backRequest: Int, refreshRequest: Int,
-    conversationLayoutReady: Boolean) {
+    conversationLayoutReady: Boolean, openConversation: String? = null, openRequest: Int = 0) {
     var conversations by remember { mutableStateOf<List<ChatConversation>>(emptyList()) }
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(openRequest) { if (openRequest > 0 && !openConversation.isNullOrBlank()) selectedId = openConversation }
     var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -412,6 +413,7 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
         val realtime = container.chatRealtimeClient
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             loadMessages(id)
+            com.custodysim.app.notifications.AppNotifications.visibleConversation = id
             realtime.join(id)
             val fallback = launch {
                 while (true) {
@@ -435,6 +437,7 @@ fun ChatScreen(container: AppContainer, session: SessionUser, scrollBehavior: Sc
                 }
             } finally {
                 fallback.cancel()
+                com.custodysim.app.notifications.AppNotifications.visibleConversation = null
                 realtime.close()
                 Log.d(CHAT_TAG, "关闭会话 $id 的实时通道")
             }

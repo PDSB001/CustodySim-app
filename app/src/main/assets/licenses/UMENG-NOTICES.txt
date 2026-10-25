@@ -1,0 +1,19 @@
+CustodySim Android notification integration
+
+U-Push dependencies are resolved from fixed Maven Central coordinates:
+com.umeng.umsdk:common:10.0.1
+com.umeng.umsdk:asms:1.8.7.2
+com.umeng.umsdk:push:6.7.6
+com.umeng.umsdk:fcm-umengaccs:2.3.0
+
+Firebase Messaging uses com.google.firebase:firebase-bom:35.1.0.
+Google Services build plugin: com.google.gms.google-services:4.5.0.
+Firebase Android SDK documentation: https://firebase.google.com/docs/android/setup
+
+Copyright and third-party grants remain with their respective owners.
+Upstream SDK documentation and terms: https://devs.umeng.com/sdk
+Upstream integration examples: https://github.com/umeng/MultiFunctionAndroidDemo
+
+Do not include local.properties, AppKey, Message Secret, App Master Secret,
+signing material, device tokens or private provider configuration in source
+archives. See docs/push-notifications.md for integration and SDK limitations.

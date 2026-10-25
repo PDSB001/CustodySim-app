@@ -20,9 +20,21 @@ import com.custodysim.app.ui.theme.CustodySimTheme
 import top.yukonga.miuix.kmp.basic.Scaffold
 
 class MainActivity : ComponentActivity() {
+    private fun readNotification(intent: android.content.Intent?) {
+        val payload = runCatching { org.json.JSONObject(intent?.getStringExtra("notification").orEmpty()) }.getOrNull() ?: return
+        com.custodysim.app.notifications.NotificationStore(this).use {
+            if (it.accepts(payload)) com.custodysim.app.notifications.AppNotifications.pendingRoute.value = payload
+        }
+        intent?.removeExtra("notification")
+    }
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        readNotification(intent)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        readNotification(intent)
         enableEdgeToEdge()
         val app = application as CustodySimApp
         setContent {

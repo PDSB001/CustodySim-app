@@ -1,5 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <lint>
+    <!-- The user explicitly chose ARM phones. abiFilters excludes x86_64 from the APK,
+         but lint also scans excluded AAR ABIs. Do not ignore any shipped ARM library. -->
+    <issue id="Aligned16KB">
+        <ignore path="**/agoo_tnet4android-3.1.14.10.2/jni/x86_64/libtnet-3.1.14.so" />
+    </issue>
+    <issue id="ChromeOsAbiSupport">
+        <ignore path="build.gradle.kts" />
+    </issue>
+    <!-- Reviewed umdid 1.1.0: empty checkClientTrusted is only used by an outbound
+         HttpsURLConnection. checkServerTrusted delegates to the platform trust manager;
+         it does not accept arbitrary server chains. Keep this exception artifact-specific.
+         Upstream accepts date-invalid certificates: see docs/push-notifications.md. -->
+    <issue id="TrustAllX509TrustManager">
+        <ignore path="**/com.umeng.umsdk/umdid/1.1.0/**/umdid-1.1.0.jar" />
+    </issue>
     <!-- Removing this qualifier fails resource linking with the current AAPT toolchain. -->
     <issue id="ObsoleteSdkInt">
         <ignore path="src/main/res/mipmap-anydpi-v26" />

@@ -12,6 +12,7 @@ buildscript {
 }
 
 plugins {
+    alias(libs.plugins.google.services) apply false
     alias(libs.plugins.android.application) apply false
     id("com.android.library") version "9.4.1" apply false
     alias(libs.plugins.kotlin.compose) apply false
@@ -36,6 +37,7 @@ tasks.register<Zip>("androidCorrespondingSource") {
         include("episteme-core/src/**", "episteme-core/*.gradle.kts", "episteme-core/LICENSE", "episteme-core/README.md", "episteme-core/UPSTREAM.json")
         exclude("**/build/**", "**/.gradle/**", "**/.kotlin/**", "**/.idea/**")
         exclude("local.properties", "**/*.jks", "**/*.keystore", "**/*.pem", "**/*.p12", "**/*.iml", "**/.env*", "**/captures/**")
+        exclude("**/google-services*.json", "**/GoogleService-Info*.plist", "**/*firebase-adminsdk*.json", "**/*service-account*.json", "**/*serviceAccount*.json", "**/.firebaserc", "**/.firebase/**", "**/firebase-debug*.log")
     }
 
 }

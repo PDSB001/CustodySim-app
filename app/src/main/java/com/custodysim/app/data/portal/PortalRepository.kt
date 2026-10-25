@@ -5,7 +5,8 @@ import com.custodysim.app.data.net.ApiResult
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class PortalNotice(val id: String, val title: String, val content: String, val read: Boolean)
+data class PortalNotice(val id: String, val title: String, val content: String, val read: Boolean, val updatedAt: String = "", val priority: String = "NORMAL", val publishedAt: String = "", val groupCount: Int = 0)
+data class NoticePage(val items: List<PortalNotice>, val nextCursor: String?)
 data class PortalApplication(val id: String, val title: String, val status: String, val reason: String, val submittedAt: String?)
 data class PortalArchive(val code: String, val formName: String, val lockedAt: String?, val data: JSONObject?)
 data class ProfileField(
@@ -138,19 +139,23 @@ class PortalRepository(private val api: ApiClient) {
         return api.post("/api/applications", body)
     }
 
-    suspend fun notices(): ApiResult<List<PortalNotice>> = when (val result = api.get("/api/notices?limit=50")) {
-        is ApiResult.Err -> result
-        is ApiResult.Ok -> {
-            val items = result.data.optJSONArray("items") ?: JSONArray()
-            ApiResult.Ok((0 until items.length()).map { i ->
-                val item = items.getJSONObject(i)
-                PortalNotice(item.optString("id"), item.optString("title"), item.optString("content"), !item.isNull("readAt"))
-            })
+    suspend fun notices(cursor: String? = null, keyword: String = "", unread: Boolean = false, important: Boolean = false): ApiResult<NoticePage> {
+        fun enc(s: String) = java.net.URLEncoder.encode(s, "UTF-8")
+        val path = "/api/notices?limit=30&keyword="+enc(keyword)+(cursor?.let { "&cursor="+enc(it) } ?: "")+(if(unread) "&unread=1" else "")+(if(important) "&priority=IMPORTANT" else "")
+        return when (val result = api.get(path)) {
+            is ApiResult.Err -> result
+            is ApiResult.Ok -> {
+                val items = result.data.optJSONArray("items") ?: JSONArray()
+                ApiResult.Ok(NoticePage((0 until items.length()).map { i ->
+                    val item = items.getJSONObject(i)
+                    PortalNotice(item.optString("id"),item.optString("title"),item.optString("content"),!item.isNull("readAt"),item.optString("updatedAt"),item.optString("priority"),item.optString("publishedAt"),item.optJSONObject("metadata")?.optJSONObject("entries")?.length() ?: 0)
+                }, result.data.optString("nextCursor").takeIf { it.isNotBlank() && it != "null" }))
+            }
         }
     }
-
-    suspend fun markNoticeRead(noticeId: String): ApiResult<JSONObject> =
-        api.patch("/api/notices", JSONObject().put("noticeId", noticeId))
+    suspend fun markNoticeRead(noticeId: String): ApiResult<JSONObject> = api.patch("/api/notices",JSONObject().put("noticeId",noticeId))
+    suspend fun markNoticesRead(items: List<PortalNotice>): ApiResult<JSONObject> = api.patch("/api/notices",JSONObject()
+        .put("noticeIds",JSONArray(items.map { it.id })).put("versions",JSONObject().apply { items.forEach { put(it.id,it.updatedAt) } }))
 
     suspend fun applications(): ApiResult<List<PortalApplication>> = when (val result = api.getArray("/api/applications")) {
         is ApiResult.Err -> result

@@ -82,6 +82,20 @@ fun AppShell(container: AppContainer, session: SessionUser, onLogout: () -> Unit
     }
     LaunchedEffect(visibleTabs) { if (tab !in visibleTabs) tab = MainTab.HOME }
     var showNotices by rememberSaveable { mutableStateOf(false) }
+    val notificationRoute by com.custodysim.app.notifications.AppNotifications.pendingRoute.collectAsState()
+    var requestedConversation by remember { mutableStateOf<String?>(null) }
+    var notificationRequest by remember { mutableIntStateOf(0) }
+    LaunchedEffect(notificationRoute) {
+        val route = notificationRoute ?: return@LaunchedEffect
+        if (route.optString("userId") == session.id) {
+            if (route.optString("kind") == "CHAT") {
+                requestedConversation = route.optString("conversationId")
+                notificationRequest++
+                tab = MainTab.CHAT
+            } else showNotices = true
+        }
+        com.custodysim.app.notifications.AppNotifications.pendingRoute.value = null
+    }
     var showCommunity by rememberSaveable { mutableStateOf(false) }
     var showLibrary by rememberSaveable { mutableStateOf(false) }
     var libraryRefreshRequest by remember { mutableIntStateOf(0) }
@@ -238,6 +252,7 @@ fun AppShell(container: AppContainer, session: SessionUser, onLogout: () -> Unit
                             MainTab.TASKS -> TasksScreen(container, scrollBehavior, allowSubmission = session.isSupervised, refreshSignal = libraryRefreshRequest)
                             MainTab.APPLICATIONS -> ApplicationsScreen(container, scrollBehavior)
                             MainTab.CHAT -> ChatScreen(container, session, scrollBehavior,
+                                openConversation = requestedConversation, openRequest = notificationRequest,
                                 conversationLayoutReady = inConversation,
                                 onConversationChanged = { chatConversationTitle = it },
                                 backRequest = chatBackRequest, refreshRequest = chatRefreshRequest)

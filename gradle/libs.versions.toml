@@ -28,6 +28,12 @@ miuix = "0.9.4"
 navigationEvent = "1.2.0"
 
 [libraries]
+firebase-bom = { module = "com.google.firebase:firebase-bom", version = "35.1.0" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
+umeng-fcm = { module = "com.umeng.umsdk:fcm-umengaccs", version = "2.3.0" }
+umeng-common = { module = "com.umeng.umsdk:common", version = "10.0.1" }
+umeng-asms = { module = "com.umeng.umsdk:asms", version = "1.8.7.2" }
+umeng-push = { module = "com.umeng.umsdk:push", version = "6.7.6" }
 test-json = { module = "org.json:json", version = "20260814" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
@@ -61,6 +67,7 @@ androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", vers
 androidx-profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileInstaller" }
 
 [plugins]
+google-services = { id = "com.google.gms.google-services", version = "4.5.0" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

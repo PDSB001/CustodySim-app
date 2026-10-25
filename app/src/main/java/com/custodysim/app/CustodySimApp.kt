@@ -27,6 +27,7 @@ class CustodySimApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.custodysim.app.notifications.AppNotifications.initialize(this)
         current = AppContainer(this)
     }
 

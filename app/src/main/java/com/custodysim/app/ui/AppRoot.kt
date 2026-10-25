@@ -103,8 +103,16 @@ fun AppRoot(container: AppContainer, onServerSettings: () -> Unit) {
         }
     }
 
+    LaunchedEffect(restored, session?.id, lifecycleOwner) {
+        if (!restored) return@LaunchedEffect
+        val id = session?.id
+        if (id == null) { container.notifications.clearLocal(); return@LaunchedEffect }
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { container.notifications.foreground(id) }
+    }
+
     DisposableEffect(Unit) {
         container.observeSessionLoss {
+            container.notifications.clearLocal()
             container.locationReporting.setEligible(false)
             LocationScheduler.cancel(context)
             session = null
@@ -189,6 +197,7 @@ fun AppRoot(container: AppContainer, onServerSettings: () -> Unit) {
                     session = requireNotNull(displayedSession),
                     onLogout = {
                         scope.launch {
+                            container.notifications.unregister()
                             container.authRepository.logout()
                             container.locationReporting.setEligible(false)
                             LocationScheduler.cancel(context)

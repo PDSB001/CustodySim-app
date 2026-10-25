@@ -37,3 +37,17 @@ app/benchmark/
 *.pem
 *.p12
 *.zip
+
+# Local provider configuration and SDK inspection
+/app/google-services.json
+/.tmp/
+
+# Private Firebase / FCM configuration, including build-variant directories
+google-services*.json
+GoogleService-Info*.plist
+*firebase-adminsdk*.json
+*service-account*.json
+*serviceAccount*.json
+.firebaserc
+.firebase/
+firebase-debug*.log

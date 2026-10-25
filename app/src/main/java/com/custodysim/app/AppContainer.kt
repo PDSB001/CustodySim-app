@@ -61,6 +61,9 @@ class AppContainer(context: Context, val endpoint: com.custodysim.app.config.Ser
 
     val taskRepository by lazy { TaskRepository(apiClient) }
 
+    private val notificationDelegate = lazy { com.custodysim.app.notifications.NotificationCoordinator(appContext, apiClient, endpoint.namespace, endpoint.realtimeUrl) }
+    val notifications by notificationDelegate
+
     val portalRepository by lazy { PortalRepository(apiClient) }
     val communityRepository by lazy { com.custodysim.app.data.community.CommunityRepository(apiClient) }
 
@@ -77,6 +80,7 @@ class AppContainer(context: Context, val endpoint: com.custodysim.app.config.Ser
     suspend fun hasSession(): Boolean = active && endpoint.baseUrl.isNotBlank() && tokenStore.refreshToken() != null
 
     suspend fun retire() {
+        if (notificationDelegate.isInitialized()) { notifications.unregister(); notifications.dispose() }
         active = false
         sessionLostListener = null
         locationReporting.setEligible(false)

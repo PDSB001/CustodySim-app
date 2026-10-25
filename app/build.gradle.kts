@@ -8,8 +8,36 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
 plugins {
+    alias(libs.plugins.google.services)
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+// Private configs are optional in source-only CI and may only contain the production package.
+// Empty the plugin's own output when unavailable, so an old local configuration cannot survive.
+val firebaseBuildRoot = layout.buildDirectory.get().asFile
+tasks.withType<com.google.gms.googleservices.GoogleServicesTask>().configureEach {
+    val permittedOutputRoot = firebaseBuildRoot
+    doFirst {
+        val configuration = googleServicesJsonFiles.get().firstOrNull { it.isFile }
+        val matching = configuration?.let { file ->
+            runCatching {
+                val root = file.reader().use { com.google.gson.JsonParser.parseReader(it).asJsonObject }
+                root.getAsJsonArray("client")?.any { client ->
+                    client.asJsonObject.getAsJsonObject("client_info")
+                        ?.getAsJsonObject("android_client_info")?.get("package_name")?.asString == applicationId.get()
+                } == true
+            }.getOrElse { throw GradleException("Invalid private Firebase configuration") }
+        } ?: false
+        if (!matching) {
+            val output = outputDirectory.get().asFile
+            require(output.toPath().toAbsolutePath().normalize().startsWith(permittedOutputRoot.toPath().toAbsolutePath().normalize()))
+            if (output.exists()) output.deleteRecursively()
+            output.mkdirs()
+            gmpAppId.get().asFile.apply { parentFile.mkdirs(); writeText("") }
+            throw org.gradle.api.tasks.StopExecutionException("Firebase is not configured for this variant")
+        }
+    }
 }
 
 abstract class GenerateNetworkSecurityConfig : DefaultTask() {
@@ -49,6 +77,9 @@ fun serverUrl(propertyKey: String, environmentKey: String): String =
     localProperties.getProperty(propertyKey)?.trim()?.takeIf { it.isNotEmpty() }
         ?: providers.environmentVariable(environmentKey).orNull?.trim().orEmpty()
 val devBaseUrl = serverUrl("custodysim.baseUrl", "CUSTODYSIM_BASE_URL")
+val umengAppKey = serverUrl("custodysim.umengAppKey", "CUSTODYSIM_UMENG_APP_KEY")
+val umengMessageSecret = serverUrl("custodysim.umengMessageSecret", "CUSTODYSIM_UMENG_MESSAGE_SECRET")
+require(listOf(umengAppKey, umengMessageSecret).all { it.isEmpty() || it.matches(Regex("[A-Za-z0-9]+")) }) { "Invalid push configuration" }
 val devRealtimeUrl = serverUrl("custodysim.realtimeUrl", "CUSTODYSIM_REALTIME_URL")
 val productionBaseUrl = serverUrl("custodysim.productionBaseUrl", "CUSTODYSIM_PRODUCTION_BASE_URL")
     .ifEmpty { "https://www.jxydev.top" }
@@ -99,6 +130,8 @@ android {
     defaultConfig {
         applicationId = "com.custodysim.app"
         minSdk = 26
+        // U-Push's x86_64 tnet binary is not 16 KB aligned. This app targets ARM phones.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
         //noinspection EditedTargetSdkVersion
         targetSdk = 37
         versionCode = 4
@@ -108,6 +141,8 @@ android {
         buildConfigField("String", "BASE_URL_ENCODED", "\"\"")
         buildConfigField("String", "REALTIME_URL_ENCODED", "\"\"")
         buildConfigField("boolean", "NEEDS_LOCAL_NETWORK", "false")
+        buildConfigField("String", "UMENG_APP_KEY", "\"\"")
+        buildConfigField("String", "UMENG_MESSAGE_SECRET", "\"\"")
     }
 
     buildFeatures {
@@ -133,6 +168,8 @@ android {
             buildConfigField("String", "REALTIME_URL_ENCODED", "\"${encodedUrl(devRealtimeUrl)}\"")
         }
         release {
+            buildConfigField("String", "UMENG_APP_KEY", "\"$umengAppKey\"")
+            buildConfigField("String", "UMENG_MESSAGE_SECRET", "\"$umengMessageSecret\"")
             buildConfigField("String", "BASE_URL_ENCODED", "\"\"")
             buildConfigField("String", "REALTIME_URL_ENCODED", "\"\"")
             buildConfigField("boolean", "NEEDS_LOCAL_NETWORK", "false")
@@ -178,6 +215,12 @@ android {
 }
 
 dependencies {
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+    implementation(libs.umeng.fcm)
+    implementation(libs.umeng.common)
+    implementation(libs.umeng.asms)
+    implementation(libs.umeng.push)
     implementation(project(":episteme-core"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
