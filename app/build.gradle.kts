@@ -140,8 +140,8 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
         //noinspection EditedTargetSdkVersion
         targetSdk = 37
-        versionCode = 4
-        versionName = "1.6.1-test"
+        versionCode = 5
+        versionName = "1.7.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "BASE_URL_ENCODED", "\"\"")

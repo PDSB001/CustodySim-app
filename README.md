@@ -4,7 +4,7 @@ Kotlin + Compose + Miuix 原生 Android 客户端，与独立的 [Web / API](htt
 
 ![Android 构建与分发方式](docs/assets/android-builds.svg)
 
-> 文档核对日期：2026-10-18。当前版本 **1.6.1-test / versionCode 4**，minSdk 26，compileSdk / targetSdk 37。版本以 [app/build.gradle.kts](app/build.gradle.kts) 为准。
+> 文档核对日期：2026-10-18；版本信息更新于 2026-11-01。源码版本 **1.7.0 / versionCode 5**，安装包与 App Release 后续发布。minSdk 26，compileSdk / targetSdk 37；版本以 [app/build.gradle.kts](app/build.gradle.kts) 为准。
 
 ## 文档入口
 

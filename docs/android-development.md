@@ -13,7 +13,7 @@
 | AGP / Kotlin        | 9.4.1 / 2.4.21                     |
 | Compose BOM / Miuix | 2026.09.00 / 0.9.4                 |
 | Android SDK         | min 26 / compile 37 / target 37    |
-| 应用版本            | 1.6.1-test / versionCode 4         |
+| 应用版本            | 1.7.0 / versionCode 5（App Release 后续发布）         |
 
 版本依据为 [版本目录](../gradle/libs.versions.toml)、[wrapper](../gradle/wrapper/gradle-wrapper.properties) 和 [App 构建文件](../app/build.gradle.kts)。不要额外使用另一套系统 Gradle 替代 wrapper。
 
