@@ -1,7 +1,14 @@
 package com.custodysim.app.ui.scores
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
@@ -12,9 +19,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.custodysim.app.data.scores.Scoreboard
 import com.custodysim.app.data.scores.signedPoints
-import com.custodysim.app.ui.common.*
+import com.custodysim.app.ui.common.GroupedListItem
+import com.custodysim.app.ui.common.PageState
+import com.custodysim.app.ui.common.SettingGroup
 import com.custodysim.app.ui.theme.AppSpace
-import top.yukonga.miuix.kmp.basic.*
+import top.yukonga.miuix.kmp.basic.DropdownItem
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.preference.OverlaySpinnerPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.time.LocalDate

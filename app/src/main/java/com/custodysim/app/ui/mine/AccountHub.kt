@@ -51,7 +51,6 @@ import com.custodysim.app.AppContainer
 import com.custodysim.app.R
 import com.custodysim.app.data.net.ApiResult
 import com.custodysim.app.data.portal.PROFILE_IMAGE_MAX_COUNT
-import com.custodysim.app.data.portal.PortalNotice
 import com.custodysim.app.data.portal.ProfileForm
 import com.custodysim.app.data.portal.ProfileImageGenerator
 import com.custodysim.app.data.portal.ProfileRecord
@@ -88,7 +87,6 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Notes
 import top.yukonga.miuix.kmp.icon.extended.Photos
-import top.yukonga.miuix.kmp.icon.extended.Promotions
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme

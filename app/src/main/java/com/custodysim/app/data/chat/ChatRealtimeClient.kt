@@ -1,25 +1,21 @@
 package com.custodysim.app.data.chat
 
 import com.custodysim.app.config.AppConfig
+import com.custodysim.app.data.chat.ChatRealtimeClient.Companion.REFRESH_LEAD_SECONDS
 import com.custodysim.app.data.net.ApiResult
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.Duration.Companion.milliseconds
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -27,6 +23,11 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /** 实时通道状态：上层据此决定是否降级到轮询（UI 不区分呈现，只记日志）。 */
 sealed interface RealtimeStatus {

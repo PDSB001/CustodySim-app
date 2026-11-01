@@ -1,7 +1,7 @@
 package com.custodysim.app.config
 
-import android.content.Context
 import android.annotation.SuppressLint
+import android.content.Context
 import com.custodysim.app.BuildConfig
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 

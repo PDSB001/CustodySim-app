@@ -1,48 +1,49 @@
 package com.custodysim.app.ui
 
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.foundation.layout.padding
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.saveable.rememberSaveable
 import android.os.SystemClock
-import kotlinx.coroutines.delay
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.unit.dp
-import com.custodysim.app.AppContainer
-import com.custodysim.app.data.auth.LoginOutcome
-import com.custodysim.app.data.auth.SessionUser
-import com.custodysim.app.data.net.ApiResult
-import com.custodysim.app.location.LocationScheduler
-import com.custodysim.app.ui.login.LoginScreen
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import com.custodysim.app.R
-import com.custodysim.app.ui.common.PageState
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.custodysim.app.AppContainer
+import com.custodysim.app.R
+import com.custodysim.app.data.auth.LoginOutcome
+import com.custodysim.app.data.auth.SessionUser
+import com.custodysim.app.data.net.ApiResult
+import com.custodysim.app.location.LocationScheduler
+import com.custodysim.app.ui.common.PageState
+import com.custodysim.app.ui.common.LegalDocumentsSheet
+import com.custodysim.app.ui.login.LoginScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 应用根：只负责"未登录 / 登录中 / 已登录"这三种状态之间的切换。
@@ -62,6 +63,7 @@ fun AppRoot(container: AppContainer, onServerSettings: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
     var noticeIsError by remember { mutableStateOf(false) }
+    var showLegal by rememberSaveable { mutableStateOf(false) }
     var retryAt by rememberSaveable { mutableLongStateOf(0L) }
     var retrySeconds by remember { mutableLongStateOf(0L) }
     LaunchedEffect(retryAt) {
@@ -131,6 +133,7 @@ fun AppRoot(container: AppContainer, onServerSettings: () -> Unit) {
 
             1 -> LoginScreen(
                     onServerSettings = onServerSettings,
+                    onLegal = { showLegal = true },
                     busy = busy,
                     retrySeconds = retrySeconds,
                     mfaRequired = mfaToken != null,
@@ -209,6 +212,7 @@ fun AppRoot(container: AppContainer, onServerSettings: () -> Unit) {
                 )
         }
     }
+    LegalDocumentsSheet(show = showLegal, onDismiss = { showLegal = false })
 }
 
 /** Each outgoing page owns its session snapshot until its animation finishes. */

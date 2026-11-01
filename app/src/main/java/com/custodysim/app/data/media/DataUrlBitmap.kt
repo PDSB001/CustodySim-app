@@ -1,10 +1,10 @@
 package com.custodysim.app.data.media
 
-import androidx.core.graphics.createBitmap
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.util.Base64
+import androidx.core.graphics.createBitmap
 import com.caverock.androidsvg.SVG
 import kotlin.math.roundToInt
 

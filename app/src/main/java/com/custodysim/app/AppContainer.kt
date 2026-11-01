@@ -3,16 +3,16 @@ package com.custodysim.app
 import android.content.Context
 import com.custodysim.app.data.auth.AuthRepository
 import com.custodysim.app.data.auth.TokenStore
-import com.custodysim.app.data.checkin.CheckinRepository
 import com.custodysim.app.data.chat.ChatRealtimeClient
 import com.custodysim.app.data.chat.ChatRepository
+import com.custodysim.app.data.checkin.CheckinRepository
 import com.custodysim.app.data.location.LocationRepository
 import com.custodysim.app.data.net.ApiClient
 import com.custodysim.app.data.portal.PortalRepository
 import com.custodysim.app.data.task.TaskRepository
 import com.custodysim.app.location.LocationCollector
-import com.custodysim.app.location.PendingPointStore
 import com.custodysim.app.location.LocationUploader
+import com.custodysim.app.location.PendingPointStore
 
 /**
  * 依赖容器：进程内单例的唯一来源。

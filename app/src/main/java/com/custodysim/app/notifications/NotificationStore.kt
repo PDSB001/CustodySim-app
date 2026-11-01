@@ -1,9 +1,9 @@
 package com.custodysim.app.notifications
 
-import androidx.core.database.sqlite.transaction
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import androidx.core.database.sqlite.transaction
 import org.json.JSONObject
 
 /** SQLite keeps callback processes and the Activity on the same binding/dedup state. */

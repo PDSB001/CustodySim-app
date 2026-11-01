@@ -1,6 +1,6 @@
 [versions]
 # AGP 9.4 要求 Gradle >= 9.6.0（官方兼容表）；AGP 9 起内置 Kotlin，无需 kotlin-android 插件。
-agp = "9.4.1"
+agp = "9.5.0"
 # Kotlin 编译器与 Compose / Serialization 插件保持同版，覆盖 AGP 内置的旧 KGP。
 kotlin = "2.4.21"
 composeBom = "2026.09.00"

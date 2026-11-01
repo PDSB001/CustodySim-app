@@ -19,9 +19,9 @@ import com.umeng.message.UmengMessageHandler
 import com.umeng.message.UmengNotificationClickHandler
 import com.umeng.message.api.UPushRegisterCallback
 import com.umeng.message.entity.UMessage
-import org.json.JSONObject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
+import org.json.JSONObject
 
 data class PushRegistrationState(
     val umeng: String = "等待友盟注册",

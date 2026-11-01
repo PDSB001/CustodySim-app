@@ -1,18 +1,22 @@
 package com.custodysim.app.ui.common
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import com.custodysim.app.ui.theme.AppShape
 import com.custodysim.app.ui.theme.AppSpace
+import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.squircle.LocalSquircleEnabled
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 
 /** MiuiX 底部弹层的薄封装，统一 show/title/onDismiss 用法。 */
 @Composable

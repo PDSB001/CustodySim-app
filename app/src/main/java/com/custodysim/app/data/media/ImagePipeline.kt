@@ -4,12 +4,12 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
-import androidx.exifinterface.media.ExifInterface
 import android.net.Uri
 import android.util.Base64
-import java.io.ByteArrayOutputStream
+import androidx.exifinterface.media.ExifInterface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 
 /** 图片转 data URL 的统一管线，打卡/补卡/任务/申请附件共用。服务端要求 <=1MB。 */
 object ImagePipeline {

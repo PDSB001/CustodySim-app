@@ -1,7 +1,5 @@
 package com.custodysim.app.data.portal
 
-import androidx.core.graphics.createBitmap
-import androidx.core.graphics.withSave
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
@@ -13,6 +11,8 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.withSave
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date

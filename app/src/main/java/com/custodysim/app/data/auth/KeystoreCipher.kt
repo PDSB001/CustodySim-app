@@ -1,7 +1,7 @@
 package com.custodysim.app.data.auth
 
-import android.content.Context
 import android.annotation.SuppressLint
+import android.content.Context
 import android.provider.Settings
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties

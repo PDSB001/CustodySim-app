@@ -14,14 +14,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import top.yukonga.miuix.kmp.basic.Text
+import com.custodysim.app.ui.theme.AppColors
+import com.custodysim.app.ui.theme.LocalDarkTheme
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.Check
 import top.yukonga.miuix.kmp.icon.basic.Close
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import com.custodysim.app.ui.theme.AppColors
-import com.custodysim.app.ui.theme.LocalDarkTheme
 
 /**
  * 补充语义色：MiuiX 主题色板只有 primary/error 等，没有 success/warning，

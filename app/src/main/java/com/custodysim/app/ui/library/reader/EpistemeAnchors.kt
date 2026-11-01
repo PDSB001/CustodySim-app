@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 package com.custodysim.app.ui.library
 
-import com.aryan.reader.paginatedreader.*
+import com.aryan.reader.paginatedreader.ContentBlock
+import com.aryan.reader.paginatedreader.FlexContainerBlock
+import com.aryan.reader.paginatedreader.Page
+import com.aryan.reader.paginatedreader.TableBlock
+import com.aryan.reader.paginatedreader.TextContentBlock
+import com.aryan.reader.paginatedreader.WrappingContentBlock
 
 /** Wire positions are Unicode code points; native split positions are UTF-16. */
 internal object EpistemeAnchors {

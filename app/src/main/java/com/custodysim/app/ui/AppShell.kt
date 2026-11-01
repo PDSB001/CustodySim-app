@@ -1,75 +1,139 @@
 package com.custodysim.app.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.res.stringResource
+import androidx.core.net.toUri
 import com.custodysim.app.AppContainer
 import com.custodysim.app.BuildConfig
 import com.custodysim.app.R
 import com.custodysim.app.data.auth.SessionUser
-import com.custodysim.app.ui.checkins.CheckinsScreen
-import com.custodysim.app.ui.home.HomeScreen
-import com.custodysim.app.ui.tasks.TasksScreen
-import com.custodysim.app.ui.mine.AccountHub
-import com.custodysim.app.ui.mine.NoticeSheet
-import com.custodysim.app.ui.applications.ApplicationsScreen
-import com.custodysim.app.ui.chat.ChatScreen
-import com.custodysim.app.ui.community.CommunityScreen
-import com.custodysim.app.ui.common.*
-import com.custodysim.app.ui.theme.*
+import com.custodysim.app.data.location.LocationPolicy
 import com.custodysim.app.location.LocationPreferences
 import com.custodysim.app.location.LocationScheduler
-import com.custodysim.app.data.location.LocationPolicy
+import com.custodysim.app.ui.applications.ApplicationsScreen
+import com.custodysim.app.ui.chat.ChatScreen
+import com.custodysim.app.ui.checkins.CheckinsScreen
+import com.custodysim.app.ui.common.EffectsPreferences
+import com.custodysim.app.ui.common.GlassSurface
+import com.custodysim.app.ui.common.GlassTabIndicator
+import com.custodysim.app.ui.common.InfoRow
+import com.custodysim.app.ui.common.LocalAppSnackbar
+import com.custodysim.app.ui.common.LocalDraftOwner
+import com.custodysim.app.ui.common.LocalGlassBackdrop
+import com.custodysim.app.ui.common.LocalGlassPageBottomInset
+import com.custodysim.app.ui.common.LocalGlassPageTopInset
+import com.custodysim.app.ui.common.NoticeBanner
+import com.custodysim.app.ui.common.SectionTitle
+import com.custodysim.app.ui.common.SettingGroup
+import com.custodysim.app.ui.common.glassBackdropSource
+import com.custodysim.app.ui.common.glassPagePadding
+import com.custodysim.app.ui.common.rememberAppListState
+import com.custodysim.app.ui.common.rememberGlassBackdrop
+import com.custodysim.app.ui.community.CommunityScreen
+import com.custodysim.app.ui.home.HomeScreen
+import com.custodysim.app.ui.mine.AccountHub
+import com.custodysim.app.ui.mine.NoticeSheet
+import com.custodysim.app.ui.tasks.TasksScreen
+import com.custodysim.app.ui.theme.AppSpace
+import com.custodysim.app.ui.theme.Appearance
+import com.custodysim.app.ui.theme.EffectsLevel
+import com.custodysim.app.ui.theme.LocalAppearance
+import com.custodysim.app.ui.theme.LocalEffects
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.*
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.DropdownItem
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.NavigationBar
+import top.yukonga.miuix.kmp.basic.NavigationBarItem
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.ScrollBehavior
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.SnackbarHost
+import top.yukonga.miuix.kmp.basic.SnackbarHostState
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Contacts
+import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.icon.extended.Community
+import top.yukonga.miuix.kmp.icon.extended.Contacts
 import top.yukonga.miuix.kmp.icon.extended.Home
 import top.yukonga.miuix.kmp.icon.extended.Messages
-import top.yukonga.miuix.kmp.icon.extended.Promotions
 import top.yukonga.miuix.kmp.icon.extended.Notes
+import top.yukonga.miuix.kmp.icon.extended.Promotions
 import top.yukonga.miuix.kmp.icon.extended.Recent
-import top.yukonga.miuix.kmp.icon.extended.Tasks
 import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Tasks
 import top.yukonga.miuix.kmp.icon.extended.VolumeOff
 import top.yukonga.miuix.kmp.icon.extended.VolumeUp
-import androidx.compose.ui.semantics.stateDescription
-import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
-import top.yukonga.miuix.kmp.preference.*
-import top.yukonga.miuix.kmp.basic.DropdownItem
+import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.preference.OverlaySpinnerPreference
+import top.yukonga.miuix.kmp.preference.RadioButtonLocation
+import top.yukonga.miuix.kmp.preference.RadioButtonPreference
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 enum class MainTab(val label: Int) {
@@ -376,6 +440,8 @@ private fun MineScreen(container: AppContainer, session: SessionUser, onLogout: 
     }
     var showLogout by remember { mutableStateOf(false) }
     var showLicenses by remember { mutableStateOf(false) }
+    var showLegal by rememberSaveable { mutableStateOf(false) }
+    var showBackgroundGuide by remember { mutableStateOf(false) }
     BackHandler(showLogout) { showLogout = false }
     LazyColumn(
         state = rememberAppListState(),
@@ -430,6 +496,7 @@ private fun MineScreen(container: AppContainer, session: SessionUser, onLogout: 
                             if (enabled) {
                                 LocationScheduler.ensurePeriodic(context)
                                 com.custodysim.app.location.LocationIntervalService.sync(context)
+                                showBackgroundGuide = true
                             } else LocationScheduler.cancel(context)
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         })
@@ -459,6 +526,9 @@ private fun MineScreen(container: AppContainer, session: SessionUser, onLogout: 
                 SettingGroup {
                     ArrowPreference(title = "服务器设置", onClick = onServerSettings)
                     ArrowPreference(title = "通知与消息", summary = "公告、提醒与消息推送开关", onClick = onNotices)
+                    ArrowPreference(title = "后台运行与自启动", summary = "查看系统设置引导", onClick = { showBackgroundGuide = true })
+                    ArrowPreference(title = "用户协议与隐私政策", summary = "App 内阅读 · 个人信息及注销申请说明",
+                        onClick = { showLegal = true })
                     ArrowPreference(title = "匿名社区", summary = "分享日常与自愿公开的档案内容", onClick = onCommunity)
                     ArrowPreference(title = "考核计分板", summary = "周积分、计分明细与执行记录", onClick = onScores)
                     InfoRow(stringResource(R.string.version), BuildConfig.VERSION_NAME)
@@ -474,6 +544,35 @@ private fun MineScreen(container: AppContainer, session: SessionUser, onLogout: 
         }
     }
     com.custodysim.app.ui.common.OpenSourceSheet(showLicenses) { showLicenses = false }
+    com.custodysim.app.ui.common.LegalDocumentsSheet(show = showLegal, onDismiss = { showLegal = false })
+    OverlayDialog(
+        show = showBackgroundGuide,
+        title = "允许后台运行",
+        summary = "按需调整系统设置，有助于减少位置上报和消息通知的延迟。",
+        onDismissRequest = { showBackgroundGuide = false },
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(AppSpace.medium)) {
+            Text("1. 打开应用设置，查找“自启动”或“后台运行”并按需允许。\n2. 在“电池”或“耗电管理”中，检查是否限制了后台运行。",
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSurface)
+            Text("不同手机的设置位置和名称可能不同。允许后台运行可能增加耗电；网络、系统限制或强行停止仍可能造成延迟。",
+                style = MiuixTheme.textStyles.footnote2,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+            TextButton(text = "前往应用设置", modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.textButtonColorsPrimary(), onClick = {
+                    runCatching {
+                        context.startActivity(android.content.Intent(
+                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            "package:${context.packageName}".toUri()))
+                        showBackgroundGuide = false
+                    }.onFailure {
+                        android.widget.Toast.makeText(context, "无法打开应用设置，请手动在系统设置中查找 CustodySim", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                })
+            TextButton(text = "稍后再说", modifier = Modifier.fillMaxWidth(),
+                onClick = { showBackgroundGuide = false })
+        }
+    }
     OverlayDialog(
         show = showLogout, title = stringResource(R.string.logout),
         summary = stringResource(R.string.logout_summary),

@@ -1,7 +1,7 @@
 package com.custodysim.app.location
 
-import androidx.core.content.edit
 import android.content.Context
+import androidx.core.content.edit
 
 /** Short intervals use a visible location service; periodic work remains a fallback. */
 object LocationPreferences {

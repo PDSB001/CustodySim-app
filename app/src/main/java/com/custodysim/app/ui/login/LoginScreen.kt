@@ -4,43 +4,78 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.runtime.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import top.yukonga.miuix.kmp.icon.extended.Back
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.*
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.custodysim.app.R
-import com.custodysim.app.ui.common.*
-import com.custodysim.app.ui.theme.*
-import top.yukonga.miuix.kmp.basic.*
+import com.custodysim.app.ui.common.NoticeBanner
+import com.custodysim.app.ui.theme.AppSpace
+import com.custodysim.app.ui.theme.LocalDarkTheme
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Contacts
 import top.yukonga.miuix.kmp.icon.extended.Lock
+import top.yukonga.miuix.kmp.preference.SwitchPreference
+import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
-import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.defaultTextStyles
-import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 /** Credentials are intentionally not persisted in saved instance state. */
 @Composable
 fun LoginScreen(
     onServerSettings: () -> Unit,
+    onLegal: () -> Unit,
     busy: Boolean, mfaRequired: Boolean, notice: String?,
     noticeIsError: Boolean,
     retrySeconds: Long = 0,
@@ -53,7 +88,7 @@ fun LoginScreen(
         ThemeController(if (dark) ColorSchemeMode.Dark else ColorSchemeMode.Light)
     }
     MiuixTheme(controller = controller, textStyles = defaultTextStyles()) {
-        LoginContent(onServerSettings, busy, mfaRequired, notice, noticeIsError,
+        LoginContent(onServerSettings, onLegal, busy, mfaRequired, notice, noticeIsError,
             retrySeconds, onSubmit, onVerifyMfa, onCancelMfa)
     }
 }
@@ -61,6 +96,7 @@ fun LoginScreen(
 @Composable
 private fun LoginContent(
     onServerSettings: () -> Unit,
+    onLegal: () -> Unit,
     busy: Boolean, mfaRequired: Boolean, notice: String?,
     noticeIsError: Boolean,
     retrySeconds: Long,
@@ -200,6 +236,8 @@ private fun LoginContent(
                 if (!mfaRequired) TextButton(text = stringResource(R.string.auth_server_settings),
                     enabled = !busy, onClick = onServerSettings,
                     modifier = Modifier.fillMaxWidth())
+                if (!mfaRequired) TextButton(text = "用户协议与隐私政策", onClick = { focus.clearFocus(); onLegal() },
+                    enabled = !busy, modifier = Modifier.fillMaxWidth())
             }
         }
     }

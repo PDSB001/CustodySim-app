@@ -1,7 +1,7 @@
 package com.custodysim.app.location
 
-import androidx.core.content.edit
 import android.content.Context
+import androidx.core.content.edit
 import com.custodysim.app.AppContainer
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow

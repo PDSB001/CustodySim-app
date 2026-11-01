@@ -1,18 +1,22 @@
 package com.custodysim.app
 
-import android.os.Bundle
 import android.os.Build
+import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.ui.graphics.Color
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.*
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import androidx.navigationevent.OnBackInvokedDefaultInput
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import androidx.navigationevent.compose.rememberNavigationEventDispatcherOwner
-import androidx.navigationevent.OnBackInvokedDefaultInput
 import com.custodysim.app.ui.AppRoot
 import com.custodysim.app.ui.common.LocalNetworkAccess
 import com.custodysim.app.ui.common.ServerSettingsSheet

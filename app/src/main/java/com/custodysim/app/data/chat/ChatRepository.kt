@@ -3,9 +3,9 @@ package com.custodysim.app.data.chat
 import com.custodysim.app.config.AppConfig
 import com.custodysim.app.data.net.ApiClient
 import com.custodysim.app.data.net.ApiResult
-import java.time.Instant
 import org.json.JSONArray
 import org.json.JSONObject
+import java.time.Instant
 
 data class ChatConversation(
     val id: String,

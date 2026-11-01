@@ -1,15 +1,27 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 package com.custodysim.app.ui.library
 
-import androidx.core.net.toUri
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.gestures.stopScroll
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
@@ -20,12 +32,27 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aryan.reader.paginatedreader.*
-import kotlinx.coroutines.*
+import androidx.core.net.toUri
+import com.aryan.reader.paginatedreader.CssParser
+import com.aryan.reader.paginatedreader.HtmlResourceResolver
+import com.aryan.reader.paginatedreader.Page
+import com.aryan.reader.paginatedreader.SharedContentStyler
+import com.aryan.reader.paginatedreader.SuspendingAndroidBlockMeasurementProvider
+import com.aryan.reader.paginatedreader.htmlToSemanticBlocks
+import com.aryan.reader.paginatedreader.paginateReaderBlocks
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 
 private data class NativeChapter(val pages: List<Page>, val offsets: List<Int>, val ids: Map<String, Int>)
 

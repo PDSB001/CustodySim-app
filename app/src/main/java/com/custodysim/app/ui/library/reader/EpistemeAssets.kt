@@ -9,16 +9,21 @@ import android.util.Base64
 import android.util.LruCache
 import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
+import com.aryan.reader.paginatedreader.ContentBlock
+import com.aryan.reader.paginatedreader.FlexContainerBlock
+import com.aryan.reader.paginatedreader.ImageBlock
+import com.aryan.reader.paginatedreader.Page
+import com.aryan.reader.paginatedreader.TableBlock
+import com.aryan.reader.paginatedreader.WrappingContentBlock
 import com.caverock.androidsvg.SVG
 import com.custodysim.app.data.net.ApiResult
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import org.jsoup.parser.Parser
 import kotlin.math.roundToInt
-import com.aryan.reader.paginatedreader.*
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 
 internal fun readerImageSampleSize(width: Int, height: Int): Int {
     var sample = 1

@@ -36,6 +36,10 @@ class ScoreboardTest {
         assertTrue(text.contains("最多 3 分"))
         assertTrue(text.contains("低于 -1"))
         assertTrue(text.contains("60%"))
+        policy.put("checkinDailyMin", -4).put("checkinDailyMax", 4).put("isolationTaskExpired", 0)
+        val updatedText = scoreRules(policy).joinToString { it.second }
+        assertTrue(updatedText.contains("每日合计 -4 至 +4"))
+        assertTrue(updatedText.contains("过期不再扣常规积分"))
         policy.getJSONObject("reading").put("enabled", false)
         assertTrue(scoreRules(policy).single { it.first == "阅读计分" }.second.contains("已关闭"))
     }

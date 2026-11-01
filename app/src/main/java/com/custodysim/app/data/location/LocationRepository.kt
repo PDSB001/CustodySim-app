@@ -1,13 +1,13 @@
 package com.custodysim.app.data.location
 
+import android.os.SystemClock
 import com.custodysim.app.config.AppConfig
 import com.custodysim.app.data.net.ApiClient
 import com.custodysim.app.data.net.ApiResult
-import org.json.JSONArray
-import org.json.JSONObject
-import android.os.SystemClock
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.json.JSONArray
+import org.json.JSONObject
 
 /** 位置上报接口。策略与批量上报都在这里，队列与调度在 location 包。 */
 class LocationRepository(private val apiClient: ApiClient) {

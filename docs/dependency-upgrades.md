@@ -1,45 +1,56 @@
 # Android 依赖升级记录
 
-核对日期：2026-10-18。Web 同步记录见 [主仓库](https://github.com/PDSB001/CustodySim/blob/master/docs/dependency-upgrades.md)。本轮保持 App 1.6.1-test / versionCode 4、API 37、minSdk 26、应用 ID、四种构建类型及服务端协议。
+核对日期：2026-11-01。Web 侧记录见 [主仓库依赖升级](https://github.com/PDSB001/CustodySim/blob/master/docs/dependency-upgrades.md)。本轮保持源码版本 **1.7.0 / versionCode 5**、API 37、minSdk 26、应用 ID、四个构建变体与服务端协议不变。
 
-## 版本基线
+## 当前基线
 
-| 依赖                                           | 升级前   | 升级后   |
-| ---------------------------------------------- | -------- | -------- |
-| Gradle wrapper                                 | 9.8.0    | 9.8.1    |
-| Kotlin / Compose 编译插件 / Serialization 插件 | 2.4.0    | 2.4.21   |
-| Core KTX                                       | 1.16.0   | 1.19.1   |
-| Lifecycle                                      | 2.9.4    | 2.11.0   |
-| Activity Compose                               | 1.9.3    | 1.13.0   |
-| WorkManager                                    | 2.9.1    | 2.12.0   |
-| DataStore                                      | 1.1.1    | 1.2.1    |
-| OkHttp                                         | 4.12.0   | 5.5.0    |
-| Miuix                                          | 0.9.3    | 0.9.4    |
-| Navigation Event                               | 1.1.2    | 1.2.0    |
-| Jsoup                                          | 1.22.1   | 1.23.2   |
-| Coroutines                                     | 1.10.2   | 1.11.0   |
-| Serialization JSON / Protobuf                  | 1.9.0    | 1.11.0   |
-| 测试 org.json                                  | 20260719 | 20260814 |
+| 分组     | 依赖                                                        | 版本                                    |
+| -------- | ----------------------------------------------------------- | --------------------------------------- |
+| 构建     | Gradle wrapper / AGP / Kotlin                               | 9.8.2 / 9.4.1 / 2.4.21                  |
+| 构建     | Google Services 插件 / Foojay resolver                      | 4.5.0 / 1.0.0                           |
+| UI       | Compose BOM / Miuix / Backdrop / Navigation Event           | 2026.09.00 / 0.9.4 / 2.0.1 / 1.2.0      |
+| 核心     | Core KTX / Lifecycle / Activity Compose                     | 1.19.1 / 2.11.0 / 1.13.0                |
+| 运行时   | WorkManager / DataStore / OkHttp                            | 2.12.0 / 1.2.1 / 5.5.0                  |
+| 资源     | AndroidSVG / ExifInterface / ProfileInstaller               | 1.4 / 1.4.2 / 1.4.1                     |
+| 推送     | Firebase BoM / 友盟 common / push / asms                    | 35.1.0 / 10.0.1 / 6.7.6 / 1.8.7.2       |
+| 推送     | 友盟 FCM 适配器 / 华为适配器 / HMS Push                     | 2.3.0 / 2.3.0 / 6.13.0.301              |
+| 阅读内核 | Jsoup / Timber / Coroutines / Serialization                 | 1.23.2 / 5.0.1 / 1.11.0 / 1.11.0        |
+| 测试     | JUnit / org.json / androidx.test:runner                      | 4.13.2 / 20260814 / 1.7.0               |
 
-AGP 9.4.1、Compose BOM 2026.09.00、Backdrop 2.0.1、ExifInterface 1.4.2、ProfileInstaller 1.4.1、AndroidSVG 1.4、Timber 5.0.1 与 JUnit 4.13.2 保持当前稳定版本。未引入 alpha、beta、RC 或快照。
+以 [版本目录](../gradle/libs.versions.toml) 为唯一事实来源；上表只是便于阅读的快照。全部为稳定版，未引入 alpha、beta、RC 或快照。
 
-本轮后续又核对了 Google Maven / Maven Central 的 27 项版本目录依赖，均已是最新稳定值；Foojay resolver 1.0.0 也核对 Gradle 官方插件门户，无需升级。Web 的 pnpm 12.14、ESLint 10 与 TypeScript 7 迁移不改变 Android 的 Gradle 工具链。
+## 上一轮升级（2026-10-18 记录）
 
-版本目录和根 buildscript 的 Kotlin 同步更新，避免 AGP 内置默认 KGP 读取新元数据失败。Gradle 通过 wrapper 任务生成，发行 ZIP 固定官方 SHA-256，wrapper JAR 也核对官方校验值。
+| 依赖                                  | 升级前   | 升级后   |
+| ------------------------------------- | -------- | -------- |
+| Gradle wrapper                        | 9.8.0    | 9.8.1    |
+| Kotlin / Compose 编译插件 / Serialization | 2.4.0 | 2.4.21   |
+| Core KTX                              | 1.16.0   | 1.19.1   |
+| Lifecycle                             | 2.9.4    | 2.11.0   |
+| Activity Compose                      | 1.9.3    | 1.13.0   |
+| WorkManager                           | 2.9.1    | 2.12.0   |
+| DataStore                             | 1.1.1    | 1.2.1    |
+| OkHttp                                | 4.12.0   | 5.5.0    |
+| Miuix                                 | 0.9.3    | 0.9.4    |
+| Navigation Event                      | 1.1.2    | 1.2.0    |
+| Jsoup                                 | 1.22.1   | 1.23.2   |
+| Coroutines                            | 1.10.2   | 1.11.0   |
+| Serialization JSON / Protobuf         | 1.9.0    | 1.11.0   |
+| 测试 org.json                         | 20260719 | 20260814 |
 
-## 兼容检查
+此后 wrapper 由 9.8.1 升到 **9.8.2**（补丁版本，无 API 变更）；其余依赖未再变动。历史表格中的“升级后”不代表当前值，当前值以上面的基线表为准。
 
-- [OkHttp 5](https://raw.githubusercontent.com/square/okhttp/master/CHANGELOG.md)拆分 Android / JVM 构件，由 Gradle 模块元数据选取平台；需要验证现有请求、缓存和 WebSocket 调用，不能只替换 JAR。本轮不启用新的 DNS / ECH 功能。
-- [WorkManager 2.12](https://developer.android.com/jetpack/androidx/releases/work)将 minSdk 提高到 24，仍低于 App 的 26。
-- [Activity 1.13](https://developer.android.com/jetpack/androidx/releases/activity)包含系统栏与媒体选择相关修复；返回手势和权限仍需要真机验收。
-- [Kotlin 完整支持表](https://kotlinlang.org/docs/gradle-configure-project.html)中 2.4.20–2.4.21 的 Gradle / AGP 完整测试上限低于本仓库现有 9.8 / 9.4 组合；本轮以实际构建验证，不宣称整个组合获得上游完整认证。
-- 未修改导入的 Episteme 源码；22 个文件哈希仍按原 UPSTREAM.json 验证。阅读依赖升级同步更新 APK 内 READER-NOTICES.txt 的版本与来源链接，保留原许可。
+## 兼容性注意
 
-## 验证
+- **OkHttp 5**：拆分为 Android / JVM 构件，由 Gradle 模块元数据选择平台；需要验证请求、HTTP 缓存（25 MiB）与 WebSocket（聊天实时通道）三条路径，不能只替换 JAR。本轮不启用 DNS / ECH 等新特性。
+- **WorkManager 2.12**：把 minSdk 提到 24，仍低于 App 的 26；长周期定位仍用它兜底。
+- **Activity 1.13**：包含系统栏与媒体选择修复；返回手势、权限与弹层行为仍需真机验收。
+- **Kotlin 2.4.21 + AGP 9.4.1 + Gradle 9.8.2**：上游兼容表中 2.4.20–2.4.21 的 Gradle / AGP 完整测试上限低于本仓库组合，本轮只能以实际构建与 CI 结果为准，不宣称获得上游完整认证。
+- **阅读内核**：Episteme 源码未修改，22 个文件哈希仍按 `UPSTREAM.json` 校验；阅读依赖升级需同步 APK 内 `READER-NOTICES.txt` 的版本与来源链接，保留原许可。
+- **推送 SDK**：友盟 FCM 适配器仍使用旧 token 协议，因此保留兼容 API，不切换到 Firebase FID 注册协议；升级前先确认友盟已支持新协议。
+- **AGP 9 内置 Kotlin**：不再应用 `kotlin-android` 插件；版本目录里的 Kotlin 与 Compose/Serialization 插件必须同版本，避免内置 KGP 读到更新的元数据失败。
 
-本轮在 Windows / JDK 17 完成：106 项 App 单测通过、lintDebug 无问题、Debug / Release / Production APK 构建通过。Release 和 Production 实际执行 R8，均生成非空 mapping.txt；22 个导入文件哈希及对应源码 ZIP 校验通过。episteme-core 当前没有独立单测（NO-SOURCE），不计入通过数量。
-
-可重复入口（JDK 17、仓库 wrapper）：
+## 验证方式
 
 ```bash
 node scripts/verify-episteme.mjs
@@ -47,6 +58,14 @@ node scripts/verify-episteme.mjs
 node scripts/verify-source-archive.mjs
 ```
 
-wrapper 升级任务单独运行，再构建源码 ZIP，避免同时修改 ZIP 输入造成 Gradle 隐式依赖校验失败。Release / Production 需确认实际执行 R8 并生成 mapping；构建结果不证明真机手势、后台任务或缓存性能。APK 分发前仍应测试登录刷新、聊天重连、封面缓存、四种图书阅读及定位授权，并分发匹配的对应源码。
+- 单测数量随代码变化，以 [CI](ci.md) 的实际运行结果为准，不在文档里固定条数。
+- Release / Production 必须确认实际执行了 R8 并生成非空 `mapping.txt`；`assembleDebug` 成功不能替代。
+- wrapper 升级单独提交后再生成本地源码 ZIP，避免同时修改 ZIP 输入触发依赖校验失败。
+- 升级完成后仍需真机复验：登录与刷新、覆盖安装、聊天重连、封面与正文缓存、四种图书阅读、定位授权与后台调度。
 
-Dependabot 每周检查 Gradle 与 Actions，兼容 minor/patch 合为一组 PR，仍需 CI 与人工审查。它不安装签名材料、不发布 APK、不部署生产。
+## 维护规则
+
+1. 每个依赖改动单独说明动机（安全、修复、功能必需），不接受“顺手升级一批”。
+2. 只升稳定版；需要 alpha/beta/RC 时在提交说明里写清回退方案。
+3. Dependabot 每周检查 Gradle 与 Actions，兼容的 minor/patch 合为一组 PR，合并前仍要 CI 通过并人工审查变更日志。
+4. Dependabot 不安装签名材料、不发布 APK、不部署生产；这些步骤始终由维护者本机完成。

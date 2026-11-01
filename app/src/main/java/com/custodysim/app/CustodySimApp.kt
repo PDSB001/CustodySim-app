@@ -2,16 +2,16 @@ package com.custodysim.app
 
 import android.app.Application
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
+import androidx.compose.runtime.setValue
 import com.custodysim.app.config.ServerEndpoint
 import com.custodysim.app.config.ServerSettings
 import com.custodysim.app.location.LocationPreferences
 import com.custodysim.app.location.LocationScheduler
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /**
  * 应用入口。这里只做一件事：把依赖容器建起来。

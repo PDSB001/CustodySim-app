@@ -48,9 +48,13 @@ fun scoreRules(policy: JSONObject?): List<Pair<String, String>> {
     val reading = policy.getJSONObject("reading")
     val ratio = (policy.getDouble("isolationMinAttendanceRatio") * 100).toInt()
     val threshold = policy.getInt("isolationThreshold")
+    val dailyLimit = if (!policy.isNull("checkinDailyMin") && !policy.isNull("checkinDailyMax"))
+        "每日合计 ${signedPoints(policy.getInt("checkinDailyMin"))} 至 ${signedPoints(policy.getInt("checkinDailyMax"))} 分。" else "日结可为负。"
+    val reflection = if (policy.has("isolationTaskExpired") && policy.optInt("isolationTaskExpired") == 0)
+        "禁闭反思仍需提交和审核，但过期不再扣常规积分。" else ""
     return listOf(
-        "打卡计分" to "每时段完成 ${signedPoints(policy.getInt("checkinCompleted"))}，补卡通过 ${signedPoints(policy.getInt("checkinMakeup"))}，缺卡 ${signedPoints(policy.getInt("checkinMissing"))}。日结可为负，系统补卡不计分。按时段计分自 ${policy.getString("effectiveDay")} 生效，之前日结保留原口径。",
-        "任务计分" to "首次按时通过 ${signedPoints(policy.getInt("taskFirstPass"))}；退回后按时通过 ${signedPoints(policy.getInt("taskReturnedThenPass"))}；截止仍未通过 ${signedPoints(policy.getInt("taskExpired"))}。任务评分不影响积分。",
+        "打卡计分" to "每时段完成 ${signedPoints(policy.getInt("checkinCompleted"))}，补卡通过 ${signedPoints(policy.getInt("checkinMakeup"))}，缺卡 ${signedPoints(policy.getInt("checkinMissing"))}。${dailyLimit}系统补卡不计分。当前规则自 ${policy.getString("effectiveDay")} 生效，之前日结保留原口径。",
+        "任务计分" to "首次按时通过 ${signedPoints(policy.getInt("taskFirstPass"))}；退回后按时通过 ${signedPoints(policy.getInt("taskReturnedThenPass"))}；截止仍未通过 ${signedPoints(policy.getInt("taskExpired"))}。任务评分不影响积分。$reflection",
         "阅读计分" to if (reading.getBoolean("enabled")) "有效阅读每 ${reading.getInt("minutesPerPoint")} 分钟 1 分，每日最多 ${reading.getInt("dailyCap")} 分，按上海自然日结算；心跳间隔超过 25 秒不计入有效时长。" else "当前已关闭阅读积分。",
         "周结与禁闭" to "周一 00:00 截止，等待 ${policy.getInt("weeklyReviewDelayMinutes")} 分钟后周结。周积分低于 $threshold 且出勤率（完成与补卡通过）低于 $ratio% 时，进入 ${policy.getInt("isolationDurationDays")} 天禁闭；该周没有打卡排班时仅按积分判定。",
         "请假" to "请假期间系统补卡与自动通过任务不参与行为积分。"

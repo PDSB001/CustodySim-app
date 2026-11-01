@@ -4,11 +4,11 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.custodysim.app.CustodySimApp
+import com.custodysim.app.R
 import com.custodysim.app.data.net.ApiErrorCode
 import com.custodysim.app.data.net.ApiResult
 import com.custodysim.app.data.net.isRetryable
 import kotlinx.coroutines.CancellationException
-import com.custodysim.app.R
 
 /**
  * 位置上报的后台任务：采集一个点 → 入队 → 按批上报。

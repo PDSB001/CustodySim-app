@@ -6,11 +6,10 @@ import com.custodysim.app.data.net.ApiClient
 import com.custodysim.app.data.net.ApiResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.ensureActive
-import kotlin.coroutines.coroutineContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /** Only this server's API paths may receive its bearer token. No cache-busting parameters. */

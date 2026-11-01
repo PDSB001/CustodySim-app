@@ -3,14 +3,27 @@ package com.custodysim.app.notifications
 import android.content.Context
 import com.custodysim.app.data.net.ApiClient
 import com.custodysim.app.data.net.ApiResult
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import okhttp3.*
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.UUID
 import java.security.SecureRandom
+import java.util.UUID
 
 /** Foreground only. Background delivery belongs to U-Push rather than an App service. */
 class NotificationCoordinator(private val context: Context, private val api: ApiClient, private val namespace: String, private val realtimeUrl: String) {
