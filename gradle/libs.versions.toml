@@ -1,9 +1,9 @@
 [versions]
 # AGP 9.4 要求 Gradle >= 9.6.0（官方兼容表）；AGP 9 起内置 Kotlin，无需 kotlin-android 插件。
-agp = "9.5.1"
+agp = "9.5.2"
 # Kotlin 编译器与 Compose / Serialization 插件保持同版，覆盖 AGP 内置的旧 KGP。
 kotlin = "2.4.21"
-composeBom = "2026.09.00"
+composeBom = "2026.11.01"
 
 coreKtx = "1.19.1"
 lifecycle = "2.11.0"
@@ -21,14 +21,14 @@ exifInterface = "1.4.2"
 readerJsoup = "1.24.1"
 readerTimber = "5.0.1"
 readerCoroutines = "1.11.0"
-readerSerialization = "1.12.0"
+readerSerialization = "1.13.0"
 # MiuiX（小米 HyperOS 风格 Compose 组件库）。纯 Android 项目必须用带 -android 后缀的构件。
 miuix = "0.9.4"
 # MiuiX 的弹层内部用 NavigationBackHandler，需提供 navigationevent 的 dispatcher owner。
 navigationEvent = "1.2.0"
 
 [libraries]
-firebase-bom = { module = "com.google.firebase:firebase-bom", version = "35.1.0" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version = "35.2.0" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 umeng-fcm = { module = "com.umeng.umsdk:fcm-umengaccs", version = "2.3.0" }
 umeng-common = { module = "com.umeng.umsdk:common", version = "10.0.1" }
@@ -69,7 +69,7 @@ androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", vers
 androidx-profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileInstaller" }
 
 [plugins]
-google-services = { id = "com.google.gms.google-services", version = "4.5.0" }
+google-services = { id = "com.google.gms.google-services", version = "4.6.0" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
